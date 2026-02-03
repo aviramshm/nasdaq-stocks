@@ -9,7 +9,7 @@ const https = require('https');
 
 // Configuration - Set these as environment variables in AWS Lambda
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-const DROP_THRESHOLD = parseFloat(process.env.DROP_THRESHOLD || '5');
+const DROP_THRESHOLD = parseFloat(process.env.DROP_THRESHOLD || '15');
 const ALERT_ENABLED = process.env.ALERT_ENABLED === 'true';
 
 // S&P 500 stocks list
