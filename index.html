@@ -244,16 +244,23 @@
     </div>
 
     <script>
-        const API_FUNCTION = 'stock-drop-alert';
+        const API_URL = 'https://hkiacme8v5.execute-api.us-east-1.amazonaws.com/prod/config';
 
-        // Load saved settings
-        function loadSettings() {
-            const settings = JSON.parse(localStorage.getItem('stockAlertConfig') || '{}');
-            document.getElementById('alertToggle').checked = settings.enabled !== false;
-            document.getElementById('threshold').value = settings.threshold || 5;
+        // Load settings from API
+        async function loadSettings() {
+            try {
+                const response = await fetch(API_URL);
+                if (response.ok) {
+                    const settings = await response.json();
+                    document.getElementById('alertToggle').checked = settings.enabled;
+                    document.getElementById('threshold').value = settings.threshold;
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
         }
 
-        // Save settings
+        // Save settings to API
         async function saveSettings() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
@@ -268,14 +275,19 @@
             status.className = 'status';
 
             try {
-                // Save to localStorage
-                localStorage.setItem('stockAlertConfig', JSON.stringify(settings));
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
 
-                // Note: To sync with AWS Lambda, you would need an API Gateway endpoint
-                // For now, settings are saved locally and Lambda uses its own config
-
-                status.textContent = 'Configuration saved! Lambda uses AWS environment variables.';
-                status.className = 'status success';
+                if (response.ok) {
+                    const result = await response.json();
+                    status.textContent = `Configuration saved! Alert ${result.enabled ? 'enabled' : 'disabled'} with ${result.threshold}% threshold.`;
+                    status.className = 'status success';
+                } else {
+                    throw new Error('Failed to save');
+                }
             } catch (error) {
                 status.textContent = 'Error saving configuration';
                 status.className = 'status error';
