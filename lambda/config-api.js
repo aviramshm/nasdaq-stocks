@@ -4,7 +4,7 @@
  * Handles GET/POST requests to read and update alert configuration.
  */
 
-const { LambdaClient, UpdateFunctionConfigurationCommand, GetFunctionConfigurationCommand } = require('@aws-sdk/client-lambda');
+const { LambdaClient, UpdateFunctionConfigurationCommand, GetFunctionConfigurationCommand, InvokeCommand } = require('@aws-sdk/client-lambda');
 
 const lambda = new LambdaClient({});
 const ALERT_FUNCTION_NAME = 'stock-drop-alert';
@@ -27,8 +27,12 @@ exports.handler = async (event) => {
 
     const method = event.requestContext?.http?.method || event.httpMethod;
 
+    const path = event.requestContext?.http?.path || event.path || '';
+
     try {
-        if (method === 'GET') {
+        if (path.endsWith('/run') && method === 'POST') {
+            return await runNow();
+        } else if (method === 'GET') {
             return await getConfig();
         } else if (method === 'POST') {
             const body = JSON.parse(event.body || '{}');
@@ -64,6 +68,26 @@ async function getConfig() {
         body: JSON.stringify({
             enabled: env.ALERT_ENABLED === 'true',
             threshold: parseFloat(env.DROP_THRESHOLD || '5')
+        })
+    };
+}
+
+async function runNow() {
+    const command = new InvokeCommand({
+        FunctionName: ALERT_FUNCTION_NAME,
+        InvocationType: 'RequestResponse',
+        Payload: JSON.stringify({})
+    });
+
+    const response = await lambda.send(command);
+    const payload = JSON.parse(Buffer.from(response.Payload).toString());
+
+    return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+            message: 'Scan completed',
+            result: JSON.parse(payload.body || '{}')
         })
     };
 }

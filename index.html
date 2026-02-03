@@ -161,11 +161,14 @@
             color: #00d4ff;
         }
 
-        .save-btn {
-            width: 100%;
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .save-btn, .run-btn {
+            flex: 1;
             padding: 14px;
-            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-            color: #1a1a2e;
             border: none;
             border-radius: 8px;
             font-size: 1rem;
@@ -174,12 +177,29 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .save-btn:hover {
+        .save-btn {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #1a1a2e;
+        }
+
+        .run-btn {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #1a1a2e;
+        }
+
+        .save-btn:hover, .run-btn:hover {
             transform: translateY(-2px);
+        }
+
+        .save-btn:hover {
             box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
         }
 
-        .save-btn:disabled {
+        .run-btn:hover {
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .save-btn:disabled, .run-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
@@ -237,7 +257,10 @@
                     Alerts sent to <strong>#stock-alerts</strong> on Slack.
                 </div>
 
-                <button class="save-btn" id="saveBtn">Save Configuration</button>
+                <div class="buttons">
+                    <button class="save-btn" id="saveBtn">Save Configuration</button>
+                    <button class="run-btn" id="runBtn">Run Now</button>
+                </div>
                 <div class="status" id="status"></div>
             </div>
         </div>
@@ -297,7 +320,47 @@
             }
         }
 
+        // Run scan now
+        async function runNow() {
+            const btn = document.getElementById('runBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            btn.textContent = 'Scanning...';
+            status.className = 'status';
+
+            try {
+                const response = await fetch(API_URL.replace('/config', '/run'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const scanResult = result.result;
+
+                    if (scanResult.message === 'No significant drops detected') {
+                        status.textContent = 'Scan complete: No stocks dropped more than the threshold.';
+                    } else if (scanResult.stocks) {
+                        status.textContent = `Alert sent! ${scanResult.stocks.length} stock(s) found: ${scanResult.stocks.map(s => s.symbol + ' (' + s.drop + ')').join(', ')}`;
+                    } else {
+                        status.textContent = 'Scan complete: ' + (scanResult.message || 'Done');
+                    }
+                    status.className = 'status success';
+                } else {
+                    throw new Error('Scan failed');
+                }
+            } catch (error) {
+                status.textContent = 'Error running scan';
+                status.className = 'status error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Now';
+            }
+        }
+
         document.getElementById('saveBtn').addEventListener('click', saveSettings);
+        document.getElementById('runBtn').addEventListener('click', runNow);
         loadSettings();
     </script>
 </body>
