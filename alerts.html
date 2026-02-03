@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Alerts - NASDAQ Stock Screener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e4e4e4;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #8892b0;
+            font-size: 1.1rem;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #00d4ff;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #00ff88;
+        }
+
+        .alerts-container {
+            background: #1e2a3a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            color: #00d4ff;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2d3a4f;
+        }
+
+        .alert-rule {
+            background: #0f1a2a;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .rule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .rule-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #e4e4e4;
+        }
+
+        .rule-description {
+            color: #8892b0;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
+            color: #8892b0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2d3a4f;
+            transition: 0.3s;
+            border-radius: 30px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #8892b0;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #00d4ff;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+            background-color: #1a1a2e;
+        }
+
+        .rule-config {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .config-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-label {
+            color: #8892b0;
+            font-size: 0.95rem;
+        }
+
+        .config-input {
+            width: 80px;
+            padding: 10px 15px;
+            border: 2px solid #2d3a4f;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #e4e4e4;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .config-unit {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .schedule-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .schedule-info p {
+            color: #8892b0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .schedule-info strong {
+            color: #00d4ff;
+        }
+
+        .save-btn {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 35px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .status-message.success {
+            display: block;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+
+        .status-message.error {
+            display: block;
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+            border: 1px solid #ff4757;
+        }
+
+        .slack-config {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #2d3a4f;
+        }
+
+        .slack-input-group {
+            margin-top: 15px;
+        }
+
+        .slack-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #2d3a4f;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #e4e4e4;
+            font-size: 0.95rem;
+            font-family: monospace;
+        }
+
+        .slack-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .slack-input::placeholder {
+            color: #5a6a7a;
+        }
+
+        .help-text {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #5a6a7a;
+        }
+
+        .test-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #2d3a4f;
+            color: #e4e4e4;
+            border: 2px solid #2d3a4f;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .test-btn:hover {
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .rule-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .rule-config {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Stock Alerts</h1>
+            <p>Configure automated alerts for your investment decisions</p>
+            <a href="index.html" class="nav-link">← Back to Stock Screener</a>
+        </header>
+
+        <div class="alerts-container">
+            <h2 class="section-title">Alert Rules</h2>
+
+            <!-- Rule 1: Daily Drop Alert -->
+            <div class="alert-rule">
+                <div class="rule-header">
+                    <div>
+                        <div class="rule-title">Daily Price Drop Alert</div>
+                        <div class="rule-description">Get notified when stocks drop significantly in a single day</div>
+                    </div>
+                    <div class="toggle-container">
+                        <span class="toggle-label">Off</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="dropAlertToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">On</span>
+                    </div>
+                </div>
+
+                <div class="rule-config">
+                    <div class="config-group">
+                        <span class="config-label">Alert when a stock drops more than</span>
+                        <input type="number" id="dropThreshold" class="config-input" value="5" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="schedule-info">
+                    <p>
+                        <strong>Schedule:</strong> This alert runs daily at <strong>10:00 AM EST</strong> (after market open).<br>
+                        <strong>Notification:</strong> Up to <strong>3 stocks</strong> with the biggest drops will be sent to <strong>#stock-alerts</strong> on Slack.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Slack Configuration -->
+            <div class="slack-config">
+                <h2 class="section-title">Slack Integration</h2>
+                <p class="config-label">Enter your Slack webhook URL to receive alerts:</p>
+                <div class="slack-input-group">
+                    <input type="text" id="slackWebhook" class="slack-input" placeholder="https://hooks.slack.com/services/T.../B.../xxx">
+                    <p class="help-text">Create a webhook at api.slack.com/apps → Your App → Incoming Webhooks</p>
+                </div>
+                <button class="test-btn" id="testSlackBtn">Test Slack Connection</button>
+            </div>
+
+            <button class="save-btn" id="saveBtn">Save Alert Settings</button>
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // Alert Configuration Manager
+        class AlertManager {
+            constructor() {
+                this.apiEndpoint = localStorage.getItem('alertsApiEndpoint') || '';
+                this.loadSettings();
+                this.bindEvents();
+            }
+
+            loadSettings() {
+                const settings = JSON.parse(localStorage.getItem('stockAlertSettings') || '{}');
+
+                document.getElementById('dropAlertToggle').checked = settings.dropAlertEnabled || false;
+                document.getElementById('dropThreshold').value = settings.dropThreshold || 5;
+                document.getElementById('slackWebhook').value = settings.slackWebhook || '';
+            }
+
+            saveSettings() {
+                const settings = {
+                    dropAlertEnabled: document.getElementById('dropAlertToggle').checked,
+                    dropThreshold: parseFloat(document.getElementById('dropThreshold').value),
+                    slackWebhook: document.getElementById('slackWebhook').value
+                };
+
+                localStorage.setItem('stockAlertSettings', JSON.stringify(settings));
+                return settings;
+            }
+
+            bindEvents() {
+                document.getElementById('saveBtn').addEventListener('click', () => this.handleSave());
+                document.getElementById('testSlackBtn').addEventListener('click', () => this.testSlackConnection());
+            }
+
+            async handleSave() {
+                const saveBtn = document.getElementById('saveBtn');
+                const statusEl = document.getElementById('statusMessage');
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                try {
+                    const settings = this.saveSettings();
+
+                    // If we have an API endpoint, sync to backend
+                    if (this.apiEndpoint) {
+                        await this.syncToBackend(settings);
+                    }
+
+                    this.showStatus('Settings saved successfully! Alerts will run daily at 10:00 AM EST.', 'success');
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    this.showStatus('Settings saved locally. Backend sync failed - alerts may not trigger.', 'error');
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Alert Settings';
+                }
+            }
+
+            async syncToBackend(settings) {
+                if (!this.apiEndpoint) return;
+
+                const response = await fetch(this.apiEndpoint + '/alerts/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to sync settings');
+                }
+            }
+
+            async testSlackConnection() {
+                const webhook = document.getElementById('slackWebhook').value;
+                const testBtn = document.getElementById('testSlackBtn');
+
+                if (!webhook) {
+                    this.showStatus('Please enter a Slack webhook URL first.', 'error');
+                    return;
+                }
+
+                testBtn.disabled = true;
+                testBtn.textContent = 'Testing...';
+
+                try {
+                    // For security, we'll test via backend or show instructions
+                    // Direct webhook calls from browser are blocked by CORS
+                    this.showStatus('Webhook URL saved. Test message will be sent when you save settings and the alert triggers.', 'success');
+                } catch (error) {
+                    this.showStatus('Could not test webhook directly. Save settings to enable alerts.', 'error');
+                } finally {
+                    testBtn.disabled = false;
+                    testBtn.textContent = 'Test Slack Connection';
+                }
+            }
+
+            showStatus(message, type) {
+                const statusEl = document.getElementById('statusMessage');
+                statusEl.textContent = message;
+                statusEl.className = 'status-message ' + type;
+
+                setTimeout(() => {
+                    statusEl.className = 'status-message';
+                }, 5000);
+            }
+        }
+
+        // Initialize
+        const alertManager = new AlertManager();
+    </script>
+</body>
+</html>

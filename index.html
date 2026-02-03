@@ -40,6 +40,24 @@
             font-size: 1.1rem;
         }
 
+        .alerts-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .alerts-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
+        }
+
         .stats-bar {
             display: flex;
             justify-content: center;
@@ -467,6 +485,7 @@
         <header>
             <h1>NASDAQ Stock Screener</h1>
             <p>Investment Decision Tool - All NASDAQ Listed Stocks</p>
+            <a href="alerts.html" class="alerts-link">Configure Alerts</a>
         </header>
 
         <div class="stats-bar">

@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Stock Drop Alert Lambda Function
+
+Parameters:
+  SlackWebhookUrl:
+    Type: String
+    Description: Slack Incoming Webhook URL
+    NoEcho: true
+  DropThreshold:
+    Type: String
+    Default: '5'
+    Description: Percentage drop threshold for alerts
+  AlertEnabled:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable or disable alerts
+
+Resources:
+  StockAlertFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-drop-alert
+      Handler: stock-alerts.handler
+      Runtime: nodejs18.x
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          DROP_THRESHOLD: !Ref DropThreshold
+          ALERT_ENABLED: !Ref AlertEnabled
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            # 10:00 AM EST = 15:00 UTC (or 14:00 UTC during DST)
+            # Using 15:00 UTC for standard time
+            Schedule: cron(0 15 ? * MON-FRI *)
+            Description: Run stock alert check at 10:00 AM EST on weekdays
+            Enabled: true
+
+  StockAlertFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${StockAlertFunction}
+      RetentionInDays: 14
+
+Outputs:
+  FunctionArn:
+    Description: Stock Alert Lambda Function ARN
+    Value: !GetAtt StockAlertFunction.Arn
+  FunctionName:
+    Description: Stock Alert Lambda Function Name
+    Value: !Ref StockAlertFunction
