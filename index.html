@@ -252,6 +252,184 @@
             color: #00d4ff;
         }
 
+        /* Stock Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e2a3a 0%, #1a1a2e 100%);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 1000px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 25px 30px;
+            border-bottom: 1px solid #2d3a4f;
+        }
+
+        .stock-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stock-symbol-large {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stock-name-large {
+            font-size: 1.1rem;
+            color: #8892b0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8892b0;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #ff4757;
+        }
+
+        .stock-price-section {
+            padding: 20px 30px;
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .current-price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #e4e4e4;
+        }
+
+        .price-change-detail {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            padding: 0 30px 25px;
+        }
+
+        .metric-card {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: #8892b0;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #e4e4e4;
+        }
+
+        .chart-section {
+            padding: 0 30px 30px;
+        }
+
+        .time-period-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .time-btn {
+            padding: 10px 20px;
+            border: 2px solid #2d3a4f;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #8892b0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .time-btn:hover {
+            border-color: #00d4ff;
+            color: #e4e4e4;
+        }
+
+        .time-btn.active {
+            background: #00d4ff;
+            border-color: #00d4ff;
+            color: #1a1a2e;
+        }
+
+        .chart-container {
+            background: #0f1a2a;
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+            position: relative;
+        }
+
+        .chart-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00d4ff;
+        }
+
+        tbody tr {
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -343,6 +521,58 @@
         <div class="pagination" id="pagination"></div>
     </div>
 
+    <!-- Stock Detail Modal -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="stock-title">
+                    <span class="stock-symbol-large" id="modalSymbol">AAPL</span>
+                    <span class="stock-name-large" id="modalName">Apple Inc.</span>
+                </div>
+                <button class="close-btn" onclick="app.closeModal()">&times;</button>
+            </div>
+
+            <div class="stock-price-section">
+                <span class="current-price" id="modalPrice">$0.00</span>
+                <span class="price-change-detail" id="modalChange">+$0.00 (+0.00%)</span>
+            </div>
+
+            <div class="stock-metrics">
+                <div class="metric-card">
+                    <div class="metric-label">Market Cap</div>
+                    <div class="metric-value" id="modalMarketCap">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Revenue</div>
+                    <div class="metric-value" id="modalRevenue">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Day High</div>
+                    <div class="metric-value" id="modalHigh">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Day Low</div>
+                    <div class="metric-value" id="modalLow">-</div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="time-period-selector">
+                    <button class="time-btn" data-period="1D">1 Day</button>
+                    <button class="time-btn" data-period="5D">5 Days</button>
+                    <button class="time-btn active" data-period="1M">1 Month</button>
+                    <button class="time-btn" data-period="1Y">1 Year</button>
+                    <button class="time-btn" data-period="5Y">5 Years</button>
+                    <button class="time-btn" data-period="MAX">Max</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="stocks-data.js"></script>
     <script src="app.js"></script>
 </body>
