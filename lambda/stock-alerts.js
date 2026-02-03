@@ -27,17 +27,29 @@ const STOCKS_TO_MONITOR = [
  */
 async function fetchStockData(symbol) {
     return new Promise((resolve, reject) => {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`;
+        const options = {
+            hostname: 'query1.finance.yahoo.com',
+            path: `/v8/finance/chart/${symbol}?range=1d&interval=1d`,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+        };
 
-        https.get(url, (res) => {
+        const req = https.request(options, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
                 try {
                     const json = JSON.parse(data);
+                    if (!json.chart || !json.chart.result || !json.chart.result[0]) {
+                        reject(new Error(`Invalid response for ${symbol}`));
+                        return;
+                    }
                     const result = json.chart.result[0];
                     const meta = result.meta;
-                    const quote = result.indicators.quote[0];
 
                     const currentPrice = meta.regularMarketPrice;
                     const previousClose = meta.previousClose || meta.chartPreviousClose;
@@ -55,7 +67,10 @@ async function fetchStockData(symbol) {
                     reject(e);
                 }
             });
-        }).on('error', reject);
+        });
+
+        req.on('error', reject);
+        req.end();
     });
 }
 
@@ -165,18 +180,32 @@ exports.handler = async (event) => {
     }
 
     try {
-        // Fetch data for all monitored stocks
+        // Fetch data for all monitored stocks with rate limiting
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
 
-        const stockPromises = STOCKS_TO_MONITOR.map(symbol =>
-            fetchStockData(symbol).catch(err => {
-                console.error(`Error fetching ${symbol}:`, err.message);
-                return null;
-            })
-        );
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        const validStocks = [];
 
-        const stocksData = await Promise.all(stockPromises);
-        const validStocks = stocksData.filter(s => s !== null);
+        // Process in batches of 10 with delays
+        const batchSize = 10;
+        for (let i = 0; i < STOCKS_TO_MONITOR.length; i += batchSize) {
+            const batch = STOCKS_TO_MONITOR.slice(i, i + batchSize);
+
+            const batchPromises = batch.map(symbol =>
+                fetchStockData(symbol).catch(err => {
+                    console.error(`Error fetching ${symbol}:`, err.message);
+                    return null;
+                })
+            );
+
+            const batchResults = await Promise.all(batchPromises);
+            validStocks.push(...batchResults.filter(s => s !== null));
+
+            // Add delay between batches to avoid rate limiting
+            if (i + batchSize < STOCKS_TO_MONITOR.length) {
+                await delay(1000);
+            }
+        }
 
         console.log(`Successfully fetched ${validStocks.length} stocks`);
 
