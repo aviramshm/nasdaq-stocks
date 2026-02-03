@@ -239,12 +239,18 @@ exports.handler = async (event) => {
     console.log('Alert enabled:', ALERT_ENABLED);
     console.log('Drop threshold:', DROP_THRESHOLD);
 
-    if (!ALERT_ENABLED) {
+    const forceRun = event.forceRun === true;
+
+    if (!ALERT_ENABLED && !forceRun) {
         console.log('Alerts are disabled. Exiting.');
         return {
             statusCode: 200,
             body: JSON.stringify({ message: 'Alerts disabled' })
         };
+    }
+
+    if (forceRun) {
+        console.log('Manual run triggered - bypassing enabled check');
     }
 
     try {

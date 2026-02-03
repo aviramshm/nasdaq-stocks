@@ -76,7 +76,7 @@ async function runNow() {
     const command = new InvokeCommand({
         FunctionName: ALERT_FUNCTION_NAME,
         InvocationType: 'RequestResponse',
-        Payload: JSON.stringify({})
+        Payload: JSON.stringify({ forceRun: true })
     });
 
     const response = await lambda.send(command);
