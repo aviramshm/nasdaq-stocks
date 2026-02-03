@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASDAQ Stock Screener</title>
+    <title>Stock Alert Configuration</title>
     <style>
         * {
             margin: 0;
@@ -16,583 +16,277 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
             color: #e4e4e4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+            width: 100%;
+            max-width: 500px;
         }
 
         header {
             text-align: center;
-            padding: 30px 0;
+            margin-bottom: 30px;
         }
 
         header h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             color: #00d4ff;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         header p {
             color: #8892b0;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
-        .alerts-link {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 10px 25px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
-            color: #fff;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: transform 0.2s, box-shadow 0.2s;
+        .card {
+            background: #1e2a3a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
-        .alerts-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
-        }
-
-        .stats-bar {
+        .rule {
             display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin: 20px 0 30px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 25px;
         }
 
-        .stat {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #00d4ff;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #8892b0;
-        }
-
-        .controls {
+        .rule-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
         }
 
-        .search-box {
+        .rule-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e4e4e4;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
             position: relative;
-            flex: 1;
-            max-width: 400px;
+            width: 56px;
+            height: 28px;
         }
 
-        .search-box input {
-            width: 100%;
-            padding: 12px 20px 12px 45px;
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2d3a4f;
+            transition: 0.3s;
+            border-radius: 28px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #8892b0;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #00d4ff;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(28px);
+            background-color: #1a1a2e;
+        }
+
+        .rule-config {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .config-label {
+            color: #8892b0;
+            font-size: 0.95rem;
+        }
+
+        .config-input {
+            width: 70px;
+            padding: 10px 12px;
             border: 2px solid #2d3a4f;
             border-radius: 8px;
-            background: #1a1a2e;
+            background: #0f1a2a;
             color: #e4e4e4;
             font-size: 1rem;
-            transition: border-color 0.3s;
+            text-align: center;
         }
 
-        .search-box input:focus {
+        .config-input:focus {
             outline: none;
             border-color: #00d4ff;
         }
 
-        .search-box::before {
-            content: "🔍";
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1rem;
+        .config-unit {
+            color: #00d4ff;
+            font-weight: 600;
         }
 
-        .page-size-selector {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .page-size-selector label {
+        .schedule-note {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid #00d4ff;
+            padding: 12px 15px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
             color: #8892b0;
+            line-height: 1.5;
         }
 
-        .page-size-selector select {
-            padding: 10px 15px;
-            border: 2px solid #2d3a4f;
-            border-radius: 8px;
-            background: #1a1a2e;
-            color: #e4e4e4;
-            font-size: 1rem;
-            cursor: pointer;
+        .schedule-note strong {
+            color: #00d4ff;
         }
 
-        .table-container {
-            background: #1e2a3a;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        table {
+        .save-btn {
             width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: #0f3460;
-            padding: 15px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #00d4ff;
-            cursor: pointer;
-            transition: background 0.3s;
-            white-space: nowrap;
-        }
-
-        th:hover {
-            background: #1a4a7a;
-        }
-
-        th.sorted-asc::after {
-            content: " ▲";
-            font-size: 0.8em;
-        }
-
-        th.sorted-desc::after {
-            content: " ▼";
-            font-size: 0.8em;
-        }
-
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #2d3a4f;
-        }
-
-        tr:hover {
-            background: #253a50;
-        }
-
-        .symbol {
-            font-weight: bold;
-            color: #00d4ff;
-        }
-
-        .company {
-            max-width: 250px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .price {
-            font-weight: 600;
-        }
-
-        .change-positive {
-            color: #00ff88;
-        }
-
-        .change-negative {
-            color: #ff4757;
-        }
-
-        .market-cap, .revenue {
-            color: #a8b2c1;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            padding: 20px;
-            flex-wrap: wrap;
-        }
-
-        .pagination button {
-            padding: 10px 18px;
-            border: 2px solid #2d3a4f;
-            border-radius: 6px;
-            background: #1a1a2e;
-            color: #e4e4e4;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.95rem;
-        }
-
-        .pagination button:hover:not(:disabled) {
-            border-color: #00d4ff;
-            background: #0f3460;
-        }
-
-        .pagination button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .pagination button.active {
-            background: #00d4ff;
-            border-color: #00d4ff;
+            padding: 14px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
             color: #1a1a2e;
-            font-weight: bold;
-        }
-
-        .page-info {
-            color: #8892b0;
-            margin: 0 15px;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 40px;
-            color: #8892b0;
-            font-size: 1.1rem;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #00d4ff;
-        }
-
-        /* Stock Detail Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 40px 20px;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1e2a3a 0%, #1a1a2e 100%);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 1000px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 25px 30px;
-            border-bottom: 1px solid #2d3a4f;
-        }
-
-        .stock-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .stock-symbol-large {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #00d4ff;
-        }
-
-        .stock-name-large {
-            font-size: 1.1rem;
-            color: #8892b0;
-        }
-
-        .close-btn {
-            background: none;
             border: none;
-            color: #8892b0;
-            font-size: 2rem;
-            cursor: pointer;
-            padding: 0;
-            line-height: 1;
-            transition: color 0.3s;
-        }
-
-        .close-btn:hover {
-            color: #ff4757;
-        }
-
-        .stock-price-section {
-            padding: 20px 30px;
-            display: flex;
-            align-items: baseline;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .current-price {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #e4e4e4;
-        }
-
-        .price-change-detail {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .stock-metrics {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            padding: 0 30px 25px;
-        }
-
-        .metric-card {
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        .metric-label {
-            font-size: 0.85rem;
-            color: #8892b0;
-            margin-bottom: 5px;
-        }
-
-        .metric-value {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #e4e4e4;
-        }
-
-        .chart-section {
-            padding: 0 30px 30px;
-        }
-
-        .time-period-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .time-btn {
-            padding: 10px 20px;
-            border: 2px solid #2d3a4f;
             border-radius: 8px;
-            background: #1a1a2e;
-            color: #8892b0;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.3s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .time-btn:hover {
-            border-color: #00d4ff;
-            color: #e4e4e4;
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
         }
 
-        .time-btn.active {
-            background: #00d4ff;
-            border-color: #00d4ff;
-            color: #1a1a2e;
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .chart-container {
-            background: #0f1a2a;
-            border-radius: 12px;
-            padding: 20px;
-            height: 400px;
-            position: relative;
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
         }
 
-        .chart-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #00d4ff;
+        .status.success {
+            display: block;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid #00ff88;
         }
 
-        tbody tr {
-            cursor: pointer;
-        }
-
-        @media (max-width: 768px) {
-            .controls {
-                flex-direction: column;
-            }
-
-            .search-box {
-                max-width: 100%;
-            }
-
-            header h1 {
-                font-size: 1.8rem;
-            }
-
-            .stats-bar {
-                gap: 20px;
-            }
-
-            .stat-value {
-                font-size: 1.4rem;
-            }
-
-            th, td {
-                padding: 10px 8px;
-                font-size: 0.9rem;
-            }
-
-            .company {
-                max-width: 120px;
-            }
+        .status.error {
+            display: block;
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+            border: 1px solid #ff4757;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>NASDAQ Stock Screener</h1>
-            <p>Investment Decision Tool - All NASDAQ Listed Stocks</p>
-            <a href="alerts.html" class="alerts-link">Configure Alerts</a>
+            <h1>Stock Alerts</h1>
+            <p>Configure your daily stock drop alerts</p>
         </header>
 
-        <div class="stats-bar">
-            <div class="stat">
-                <div class="stat-value" id="totalStocks">-</div>
-                <div class="stat-label">Total Stocks</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalMarketCap">-</div>
-                <div class="stat-label">Total Market Cap</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalRevenue">-</div>
-                <div class="stat-label">Total Revenue</div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search by symbol or company name...">
-            </div>
-            <div class="page-size-selector">
-                <label for="pageSize">Show:</label>
-                <select id="pageSize">
-                    <option value="25">25</option>
-                    <option value="50" selected>50</option>
-                    <option value="100">100</option>
-                    <option value="200">200</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th data-sort="symbol">Symbol</th>
-                        <th data-sort="name">Company Name</th>
-                        <th data-sort="marketCapValue">Market Cap</th>
-                        <th data-sort="price">Stock Price</th>
-                        <th data-sort="change">$ Change</th>
-                        <th data-sort="changePercent">% Change</th>
-                        <th data-sort="revenueValue">Revenue</th>
-                    </tr>
-                </thead>
-                <tbody id="stocksTable">
-                    <tr><td colspan="7" class="loading">Loading stocks...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination" id="pagination"></div>
-    </div>
-
-    <!-- Stock Detail Modal -->
-    <div class="modal-overlay" id="stockModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="stock-title">
-                    <span class="stock-symbol-large" id="modalSymbol">AAPL</span>
-                    <span class="stock-name-large" id="modalName">Apple Inc.</span>
+        <div class="card">
+            <div class="rule">
+                <div class="rule-header">
+                    <span class="rule-title">Daily Drop Alert</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="alertToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
                 </div>
-                <button class="close-btn" onclick="app.closeModal()">&times;</button>
-            </div>
 
-            <div class="stock-price-section">
-                <span class="current-price" id="modalPrice">$0.00</span>
-                <span class="price-change-detail" id="modalChange">+$0.00 (+0.00%)</span>
-            </div>
+                <div class="rule-config">
+                    <span class="config-label">Alert when a stock drops more than</span>
+                    <input type="number" id="threshold" class="config-input" value="5" min="1" max="50" step="0.5">
+                    <span class="config-unit">%</span>
+                </div>
 
-            <div class="stock-metrics">
-                <div class="metric-card">
-                    <div class="metric-label">Market Cap</div>
-                    <div class="metric-value" id="modalMarketCap">-</div>
+                <div class="schedule-note">
+                    Runs daily at <strong>10:00 AM EST</strong> on weekdays.<br>
+                    Alerts sent to <strong>#stock-alerts</strong> on Slack.
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">Revenue</div>
-                    <div class="metric-value" id="modalRevenue">-</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Day High</div>
-                    <div class="metric-value" id="modalHigh">-</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Day Low</div>
-                    <div class="metric-value" id="modalLow">-</div>
-                </div>
-            </div>
 
-            <div class="chart-section">
-                <div class="time-period-selector">
-                    <button class="time-btn" data-period="1D">1 Day</button>
-                    <button class="time-btn" data-period="5D">5 Days</button>
-                    <button class="time-btn active" data-period="1M">1 Month</button>
-                    <button class="time-btn" data-period="1Y">1 Year</button>
-                    <button class="time-btn" data-period="5Y">5 Years</button>
-                    <button class="time-btn" data-period="MAX">Max</button>
-                </div>
-                <div class="chart-container">
-                    <canvas id="stockChart"></canvas>
-                </div>
+                <button class="save-btn" id="saveBtn">Save Configuration</button>
+                <div class="status" id="status"></div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="stocks-data.js"></script>
-    <script src="app.js"></script>
+    <script>
+        const API_FUNCTION = 'stock-drop-alert';
+
+        // Load saved settings
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('stockAlertConfig') || '{}');
+            document.getElementById('alertToggle').checked = settings.enabled !== false;
+            document.getElementById('threshold').value = settings.threshold || 5;
+        }
+
+        // Save settings
+        async function saveSettings() {
+            const btn = document.getElementById('saveBtn');
+            const status = document.getElementById('status');
+
+            const settings = {
+                enabled: document.getElementById('alertToggle').checked,
+                threshold: parseFloat(document.getElementById('threshold').value)
+            };
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            status.className = 'status';
+
+            try {
+                // Save to localStorage
+                localStorage.setItem('stockAlertConfig', JSON.stringify(settings));
+
+                // Note: To sync with AWS Lambda, you would need an API Gateway endpoint
+                // For now, settings are saved locally and Lambda uses its own config
+
+                status.textContent = 'Configuration saved! Lambda uses AWS environment variables.';
+                status.className = 'status success';
+            } catch (error) {
+                status.textContent = 'Error saving configuration';
+                status.className = 'status error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Configuration';
+            }
+        }
+
+        document.getElementById('saveBtn').addEventListener('click', saveSettings);
+        loadSettings();
+    </script>
 </body>
 </html>
