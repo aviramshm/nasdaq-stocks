@@ -66,28 +66,30 @@ async function getConfig() {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-            enabled: env.ALERT_ENABLED === 'true',
-            threshold: parseFloat(env.DROP_THRESHOLD || '5')
+            rule1Enabled: env.RULE1_ENABLED === 'true',
+            rule1Threshold: parseFloat(env.RULE1_THRESHOLD || '15'),
+            rule2Enabled: env.RULE2_ENABLED === 'true',
+            rule2Threshold: parseFloat(env.RULE2_THRESHOLD || '20')
         })
     };
 }
 
 async function runNow() {
+    // Invoke asynchronously to avoid API Gateway timeout
     const command = new InvokeCommand({
         FunctionName: ALERT_FUNCTION_NAME,
-        InvocationType: 'RequestResponse',
+        InvocationType: 'Event', // Async invocation
         Payload: JSON.stringify({ forceRun: true })
     });
 
-    const response = await lambda.send(command);
-    const payload = JSON.parse(Buffer.from(response.Payload).toString());
+    await lambda.send(command);
 
     return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-            message: 'Scan completed',
-            result: JSON.parse(payload.body || '{}')
+            message: 'Scan started',
+            note: 'Results will be sent to Slack when complete'
         })
     };
 }
@@ -103,8 +105,10 @@ async function updateConfig(config) {
     // Merge with new values
     const newEnv = {
         ...currentEnv,
-        ALERT_ENABLED: String(config.enabled !== false),
-        DROP_THRESHOLD: String(config.threshold || 5)
+        RULE1_ENABLED: String(config.rule1Enabled !== false),
+        RULE1_THRESHOLD: String(config.rule1Threshold || 15),
+        RULE2_ENABLED: String(config.rule2Enabled === true),
+        RULE2_THRESHOLD: String(config.rule2Threshold || 20)
     };
 
     const updateCommand = new UpdateFunctionConfigurationCommand({
@@ -119,8 +123,10 @@ async function updateConfig(config) {
         headers,
         body: JSON.stringify({
             message: 'Configuration updated',
-            enabled: newEnv.ALERT_ENABLED === 'true',
-            threshold: parseFloat(newEnv.DROP_THRESHOLD)
+            rule1Enabled: newEnv.RULE1_ENABLED === 'true',
+            rule1Threshold: parseFloat(newEnv.RULE1_THRESHOLD),
+            rule2Enabled: newEnv.RULE2_ENABLED === 'true',
+            rule2Threshold: parseFloat(newEnv.RULE2_THRESHOLD)
         })
     };
 }

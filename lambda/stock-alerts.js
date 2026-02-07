@@ -9,8 +9,14 @@ const https = require('https');
 
 // Configuration - Set these as environment variables in AWS Lambda
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-const DROP_THRESHOLD = parseFloat(process.env.DROP_THRESHOLD || '15');
-const ALERT_ENABLED = process.env.ALERT_ENABLED === 'true';
+
+// Rule 1: Daily drop
+const RULE1_ENABLED = process.env.RULE1_ENABLED === 'true';
+const RULE1_THRESHOLD = parseFloat(process.env.RULE1_THRESHOLD || '15');
+
+// Rule 2: 2-day drop
+const RULE2_ENABLED = process.env.RULE2_ENABLED === 'true';
+const RULE2_THRESHOLD = parseFloat(process.env.RULE2_THRESHOLD || '20');
 
 // S&P 500 stocks list
 const STOCKS_TO_MONITOR = [
@@ -93,15 +99,17 @@ const STOCKS_TO_MONITOR = [
 
 /**
  * Fetch stock data from Yahoo Finance
+ * @param {string} symbol - Stock symbol
+ * @param {string} range - Time range ('1d' or '5d')
  */
-async function fetchStockData(symbol) {
+async function fetchStockData(symbol, range = '1d') {
     return new Promise((resolve, reject) => {
         // Handle special symbols like BRK.B
         const encodedSymbol = symbol.replace('.', '-');
 
         const options = {
             hostname: 'query1.finance.yahoo.com',
-            path: `/v8/finance/chart/${encodedSymbol}?range=1d&interval=1d`,
+            path: `/v8/finance/chart/${encodedSymbol}?range=${range}&interval=1d`,
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -122,18 +130,29 @@ async function fetchStockData(symbol) {
                     }
                     const result = json.chart.result[0];
                     const meta = result.meta;
+                    const closes = result.indicators.quote[0].close;
 
                     const currentPrice = meta.regularMarketPrice;
                     const previousClose = meta.previousClose || meta.chartPreviousClose;
-                    const changePercent = ((currentPrice - previousClose) / previousClose) * 100;
+                    const change1d = ((currentPrice - previousClose) / previousClose) * 100;
+
+                    // Calculate 2-day change if we have enough data
+                    let change2d = null;
+                    if (closes && closes.length >= 2) {
+                        // Get close from 2 days ago
+                        const twoDaysAgoClose = closes[0];
+                        if (twoDaysAgoClose) {
+                            change2d = ((currentPrice - twoDaysAgoClose) / twoDaysAgoClose) * 100;
+                        }
+                    }
 
                     resolve({
                         symbol: symbol,
                         name: meta.shortName || symbol,
                         price: currentPrice,
                         previousClose: previousClose,
-                        changePercent: changePercent,
-                        change: currentPrice - previousClose
+                        change1d: change1d,
+                        change2d: change2d
                     });
                 } catch (e) {
                     reject(e);
@@ -149,7 +168,7 @@ async function fetchStockData(symbol) {
 /**
  * Send alert to Slack
  */
-async function sendSlackAlert(stocks) {
+async function sendSlackAlert(rule1Stocks, rule2Stocks) {
     return new Promise((resolve, reject) => {
         if (!SLACK_WEBHOOK_URL) {
             reject(new Error('Slack webhook URL not configured'));
@@ -157,50 +176,67 @@ async function sendSlackAlert(stocks) {
         }
 
         const webhookUrl = new URL(SLACK_WEBHOOK_URL);
-
-        // Build stock list for message
-        const stockList = stocks.map(stock =>
-            `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.changePercent.toFixed(2)}%*`
-        ).join('\n');
-
-        const message = {
-            blocks: [
-                {
-                    type: 'header',
-                    text: {
-                        type: 'plain_text',
-                        text: `📉 Stock Drop Alert (${stocks.length} stock${stocks.length > 1 ? 's' : ''})`,
-                        emoji: true
-                    }
-                },
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: `The following stocks dropped more than *${DROP_THRESHOLD}%* today:`
-                    }
-                },
-                { type: 'divider' },
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: stockList
-                    }
-                },
-                { type: 'divider' },
-                {
-                    type: 'context',
-                    elements: [
-                        {
-                            type: 'mrkdwn',
-                            text: `🕙 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} EST | S&P 500 + Growth Stocks`
-                        }
-                    ]
+        const blocks = [
+            {
+                type: 'header',
+                text: {
+                    type: 'plain_text',
+                    text: '📉 Stock Drop Alert',
+                    emoji: true
                 }
-            ]
-        };
+            }
+        ];
 
+        // Rule 1: Daily drops
+        if (rule1Stocks.length > 0) {
+            const stockList = rule1Stocks.map(stock =>
+                `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`
+            ).join('\n');
+
+            blocks.push(
+                { type: 'divider' },
+                {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `*1-Day Drop (>${RULE1_THRESHOLD}%)* - ${rule1Stocks.length} stock(s):\n${stockList}`
+                    }
+                }
+            );
+        }
+
+        // Rule 2: 2-day drops
+        if (rule2Stocks.length > 0) {
+            const stockList = rule2Stocks.map(stock =>
+                `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`
+            ).join('\n');
+
+            blocks.push(
+                { type: 'divider' },
+                {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `*2-Day Drop (>${RULE2_THRESHOLD}%)* - ${rule2Stocks.length} stock(s):\n${stockList}`
+                    }
+                }
+            );
+        }
+
+        blocks.push(
+            { type: 'divider' },
+            {
+                type: 'context',
+                elements: [
+                    {
+                        type: 'mrkdwn',
+                        text: `🕙 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} EST`
+                    }
+                ]
+            }
+        );
+
+        const message = { blocks };
         const postData = JSON.stringify(message);
 
         const options = {
@@ -236,16 +272,16 @@ async function sendSlackAlert(stocks) {
  */
 exports.handler = async (event) => {
     console.log('Stock Alert Lambda triggered');
-    console.log('Alert enabled:', ALERT_ENABLED);
-    console.log('Drop threshold:', DROP_THRESHOLD);
+    console.log('Rule 1 (1-day):', RULE1_ENABLED, 'threshold:', RULE1_THRESHOLD);
+    console.log('Rule 2 (2-day):', RULE2_ENABLED, 'threshold:', RULE2_THRESHOLD);
 
     const forceRun = event.forceRun === true;
 
-    if (!ALERT_ENABLED && !forceRun) {
-        console.log('Alerts are disabled. Exiting.');
+    if (!RULE1_ENABLED && !RULE2_ENABLED && !forceRun) {
+        console.log('All rules are disabled. Exiting.');
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Alerts disabled' })
+            body: JSON.stringify({ message: 'All rules disabled' })
         };
     }
 
@@ -261,12 +297,13 @@ exports.handler = async (event) => {
         const validStocks = [];
 
         // Process in batches of 15 with delays
+        // Use 5d range to get 2-day data for rule 2
         const batchSize = 15;
         for (let i = 0; i < STOCKS_TO_MONITOR.length; i += batchSize) {
             const batch = STOCKS_TO_MONITOR.slice(i, i + batchSize);
 
             const batchPromises = batch.map(symbol =>
-                fetchStockData(symbol).catch(err => {
+                fetchStockData(symbol, '5d').catch(err => {
                     console.error(`Error fetching ${symbol}:`, err.message);
                     return null;
                 })
@@ -283,14 +320,20 @@ exports.handler = async (event) => {
 
         console.log(`Successfully fetched ${validStocks.length} stocks`);
 
-        // Filter ALL stocks that dropped more than threshold
-        const droppedStocks = validStocks
-            .filter(stock => stock.changePercent <= -DROP_THRESHOLD)
-            .sort((a, b) => a.changePercent - b.changePercent); // Sort by biggest drop
+        // Rule 1: Filter stocks that dropped more than threshold in 1 day
+        const rule1Stocks = (RULE1_ENABLED || forceRun) ? validStocks
+            .filter(stock => stock.change1d <= -RULE1_THRESHOLD)
+            .sort((a, b) => a.change1d - b.change1d) : [];
 
-        console.log(`Found ${droppedStocks.length} stocks with drops > ${DROP_THRESHOLD}%`);
+        // Rule 2: Filter stocks that dropped more than threshold in 2 days
+        const rule2Stocks = (RULE2_ENABLED || forceRun) ? validStocks
+            .filter(stock => stock.change2d !== null && stock.change2d <= -RULE2_THRESHOLD)
+            .sort((a, b) => a.change2d - b.change2d) : [];
 
-        if (droppedStocks.length === 0) {
+        console.log(`Rule 1: Found ${rule1Stocks.length} stocks with 1-day drops > ${RULE1_THRESHOLD}%`);
+        console.log(`Rule 2: Found ${rule2Stocks.length} stocks with 2-day drops > ${RULE2_THRESHOLD}%`);
+
+        if (rule1Stocks.length === 0 && rule2Stocks.length === 0) {
             console.log('No significant drops detected. No alert sent.');
             return {
                 statusCode: 200,
@@ -300,16 +343,20 @@ exports.handler = async (event) => {
 
         // Send Slack alert
         console.log('Sending Slack alert...');
-        await sendSlackAlert(droppedStocks);
+        await sendSlackAlert(rule1Stocks, rule2Stocks);
         console.log('Slack alert sent successfully!');
 
         return {
             statusCode: 200,
             body: JSON.stringify({
                 message: 'Alert sent successfully',
-                stocks: droppedStocks.map(s => ({
+                rule1Stocks: rule1Stocks.map(s => ({
                     symbol: s.symbol,
-                    drop: `${s.changePercent.toFixed(2)}%`
+                    drop: `${s.change1d.toFixed(2)}%`
+                })),
+                rule2Stocks: rule2Stocks.map(s => ({
+                    symbol: s.symbol,
+                    drop: `${s.change2d.toFixed(2)}%`
                 }))
             })
         };

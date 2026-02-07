@@ -24,7 +24,7 @@
 
         .container {
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
         }
 
         header {
@@ -50,10 +50,20 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
-        .rule {
+        .rules {
             display: flex;
             flex-direction: column;
             gap: 25px;
+        }
+
+        .rule {
+            background: #0f1a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .rule-header {
+            margin-bottom: 15px;
         }
 
         .rule-header {
@@ -237,19 +247,37 @@
         </header>
 
         <div class="card">
-            <div class="rule">
-                <div class="rule-header">
-                    <span class="rule-title">Daily Drop Alert</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="alertToggle" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
+            <div class="rules">
+                <!-- Rule 1: Daily Drop -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">Daily Drop Alert</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule1Toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Drop in 1 day more than</span>
+                        <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                    </div>
                 </div>
 
-                <div class="rule-config">
-                    <span class="config-label">Alert when a stock drops more than</span>
-                    <input type="number" id="threshold" class="config-input" value="15" min="1" max="50" step="0.5">
-                    <span class="config-unit">%</span>
+                <!-- Rule 2: 2-Day Drop -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">2-Day Drop Alert</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule2Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Drop in 2 days more than</span>
+                        <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                    </div>
                 </div>
 
                 <div class="schedule-note">
@@ -275,8 +303,10 @@
                 const response = await fetch(API_URL);
                 if (response.ok) {
                     const settings = await response.json();
-                    document.getElementById('alertToggle').checked = settings.enabled;
-                    document.getElementById('threshold').value = settings.threshold;
+                    document.getElementById('rule1Toggle').checked = settings.rule1Enabled;
+                    document.getElementById('rule1Threshold').value = settings.rule1Threshold;
+                    document.getElementById('rule2Toggle').checked = settings.rule2Enabled;
+                    document.getElementById('rule2Threshold').value = settings.rule2Threshold;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -289,8 +319,10 @@
             const status = document.getElementById('status');
 
             const settings = {
-                enabled: document.getElementById('alertToggle').checked,
-                threshold: parseFloat(document.getElementById('threshold').value)
+                rule1Enabled: document.getElementById('rule1Toggle').checked,
+                rule1Threshold: parseFloat(document.getElementById('rule1Threshold').value),
+                rule2Enabled: document.getElementById('rule2Toggle').checked,
+                rule2Threshold: parseFloat(document.getElementById('rule2Threshold').value)
             };
 
             btn.disabled = true;
@@ -305,8 +337,7 @@
                 });
 
                 if (response.ok) {
-                    const result = await response.json();
-                    status.textContent = `Configuration saved! Alert ${result.enabled ? 'enabled' : 'disabled'} with ${result.threshold}% threshold.`;
+                    status.textContent = 'Configuration saved!';
                     status.className = 'status success';
                 } else {
                     throw new Error('Failed to save');
@@ -336,16 +367,7 @@
                 });
 
                 if (response.ok) {
-                    const result = await response.json();
-                    const scanResult = result.result;
-
-                    if (scanResult.message === 'No significant drops detected') {
-                        status.textContent = 'Scan complete: No stocks dropped more than the threshold.';
-                    } else if (scanResult.stocks) {
-                        status.textContent = `Alert sent! ${scanResult.stocks.length} stock(s) found: ${scanResult.stocks.map(s => s.symbol + ' (' + s.drop + ')').join(', ')}`;
-                    } else {
-                        status.textContent = 'Scan complete: ' + (scanResult.message || 'Done');
-                    }
+                    status.textContent = 'Scan started! Results will be sent to Slack.';
                     status.className = 'status success';
                 } else {
                     throw new Error('Scan failed');
