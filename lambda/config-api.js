@@ -69,7 +69,19 @@ async function getConfig() {
             rule1Enabled: env.RULE1_ENABLED === 'true',
             rule1Threshold: parseFloat(env.RULE1_THRESHOLD || '15'),
             rule2Enabled: env.RULE2_ENABLED === 'true',
-            rule2Threshold: parseFloat(env.RULE2_THRESHOLD || '20')
+            rule2Threshold: parseFloat(env.RULE2_THRESHOLD || '20'),
+            // Upside rules
+            rule3Enabled: env.RULE3_ENABLED === 'true',
+            rule3Threshold1: parseFloat(env.RULE3_THRESHOLD1 || '10'),
+            rule3Threshold2: parseFloat(env.RULE3_THRESHOLD2 || '3'),
+            rule4Enabled: env.RULE4_ENABLED === 'true',
+            rule4Threshold: parseFloat(env.RULE4_THRESHOLD || '5'),
+            rule5Enabled: env.RULE5_ENABLED === 'true',
+            rule5Threshold1: parseFloat(env.RULE5_THRESHOLD1 || '5'),
+            rule5Threshold2: parseFloat(env.RULE5_THRESHOLD2 || '2'),
+            rule6Enabled: env.RULE6_ENABLED === 'true',
+            rule6Threshold1: parseFloat(env.RULE6_THRESHOLD1 || '3'),
+            rule6Threshold2: parseFloat(env.RULE6_THRESHOLD2 || '2')
         })
     };
 }
@@ -108,7 +120,19 @@ async function updateConfig(config) {
         RULE1_ENABLED: String(config.rule1Enabled !== false),
         RULE1_THRESHOLD: String(config.rule1Threshold || 15),
         RULE2_ENABLED: String(config.rule2Enabled === true),
-        RULE2_THRESHOLD: String(config.rule2Threshold || 20)
+        RULE2_THRESHOLD: String(config.rule2Threshold || 20),
+        // Upside rules
+        RULE3_ENABLED: String(config.rule3Enabled === true),
+        RULE3_THRESHOLD1: String(config.rule3Threshold1 || 10),
+        RULE3_THRESHOLD2: String(config.rule3Threshold2 || 3),
+        RULE4_ENABLED: String(config.rule4Enabled === true),
+        RULE4_THRESHOLD: String(config.rule4Threshold || 5),
+        RULE5_ENABLED: String(config.rule5Enabled === true),
+        RULE5_THRESHOLD1: String(config.rule5Threshold1 || 5),
+        RULE5_THRESHOLD2: String(config.rule5Threshold2 || 2),
+        RULE6_ENABLED: String(config.rule6Enabled === true),
+        RULE6_THRESHOLD1: String(config.rule6Threshold1 || 3),
+        RULE6_THRESHOLD2: String(config.rule6Threshold2 || 2)
     };
 
     const updateCommand = new UpdateFunctionConfigurationCommand({

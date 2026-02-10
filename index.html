@@ -167,6 +167,36 @@
             line-height: 1.5;
         }
 
+        .section-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #00ff88;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #2d3a4f;
+        }
+
+        .section-divider span {
+            padding: 0 15px;
+        }
+
+        .rule.upside {
+            border-left: 3px solid #00ff88;
+        }
+
+        .rule.upside .rule-config {
+            flex-wrap: wrap;
+        }
+
         .schedule-note strong {
             color: #00d4ff;
         }
@@ -280,6 +310,87 @@
                     </div>
                 </div>
 
+                <div class="section-divider">
+                    <span>Upside Potential Indicators</span>
+                </div>
+
+                <!-- Rule 3: Recovery Signal -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Recovery Signal</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule3Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule3Threshold1" class="config-input" value="10" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">in 5 days, but UP more than</span>
+                        <input type="number" id="rule3Threshold2" class="config-input" value="3" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">today</span>
+                    </div>
+                </div>
+
+                <!-- Rule 4: Near 52-Week Low -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Near 52-Week Low</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule4Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Within</span>
+                        <input type="number" id="rule4Threshold" class="config-input" value="5" min="1" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">of 52-week low</span>
+                    </div>
+                </div>
+
+                <!-- Rule 5: Bounce Back -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Bounce Back</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule5Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule5Threshold1" class="config-input" value="5" min="1" max="30" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">yesterday, but UP more than</span>
+                        <input type="number" id="rule5Threshold2" class="config-input" value="2" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">today</span>
+                    </div>
+                </div>
+
+                <!-- Rule 6: High Volume Surge -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">High Volume Surge</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule6Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Up more than</span>
+                        <input type="number" id="rule6Threshold1" class="config-input" value="3" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">with volume</span>
+                        <input type="number" id="rule6Threshold2" class="config-input" value="2" min="1" max="10" step="0.5">
+                        <span class="config-unit">x</span>
+                        <span class="config-label">avg</span>
+                    </div>
+                </div>
+
                 <div class="schedule-note">
                     Runs daily at <strong>10:00 AM EST</strong> on weekdays.<br>
                     Alerts sent to <strong>#stock-alerts</strong> on Slack.
@@ -307,6 +418,18 @@
                     document.getElementById('rule1Threshold').value = settings.rule1Threshold;
                     document.getElementById('rule2Toggle').checked = settings.rule2Enabled;
                     document.getElementById('rule2Threshold').value = settings.rule2Threshold;
+                    // Upside rules
+                    document.getElementById('rule3Toggle').checked = settings.rule3Enabled;
+                    document.getElementById('rule3Threshold1').value = settings.rule3Threshold1 || 10;
+                    document.getElementById('rule3Threshold2').value = settings.rule3Threshold2 || 3;
+                    document.getElementById('rule4Toggle').checked = settings.rule4Enabled;
+                    document.getElementById('rule4Threshold').value = settings.rule4Threshold || 5;
+                    document.getElementById('rule5Toggle').checked = settings.rule5Enabled;
+                    document.getElementById('rule5Threshold1').value = settings.rule5Threshold1 || 5;
+                    document.getElementById('rule5Threshold2').value = settings.rule5Threshold2 || 2;
+                    document.getElementById('rule6Toggle').checked = settings.rule6Enabled;
+                    document.getElementById('rule6Threshold1').value = settings.rule6Threshold1 || 3;
+                    document.getElementById('rule6Threshold2').value = settings.rule6Threshold2 || 2;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -322,7 +445,19 @@
                 rule1Enabled: document.getElementById('rule1Toggle').checked,
                 rule1Threshold: parseFloat(document.getElementById('rule1Threshold').value),
                 rule2Enabled: document.getElementById('rule2Toggle').checked,
-                rule2Threshold: parseFloat(document.getElementById('rule2Threshold').value)
+                rule2Threshold: parseFloat(document.getElementById('rule2Threshold').value),
+                // Upside rules
+                rule3Enabled: document.getElementById('rule3Toggle').checked,
+                rule3Threshold1: parseFloat(document.getElementById('rule3Threshold1').value),
+                rule3Threshold2: parseFloat(document.getElementById('rule3Threshold2').value),
+                rule4Enabled: document.getElementById('rule4Toggle').checked,
+                rule4Threshold: parseFloat(document.getElementById('rule4Threshold').value),
+                rule5Enabled: document.getElementById('rule5Toggle').checked,
+                rule5Threshold1: parseFloat(document.getElementById('rule5Threshold1').value),
+                rule5Threshold2: parseFloat(document.getElementById('rule5Threshold2').value),
+                rule6Enabled: document.getElementById('rule6Toggle').checked,
+                rule6Threshold1: parseFloat(document.getElementById('rule6Threshold1').value),
+                rule6Threshold2: parseFloat(document.getElementById('rule6Threshold2').value)
             };
 
             btn.disabled = true;

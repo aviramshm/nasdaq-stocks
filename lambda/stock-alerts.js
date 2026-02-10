@@ -18,6 +18,25 @@ const RULE1_THRESHOLD = parseFloat(process.env.RULE1_THRESHOLD || '15');
 const RULE2_ENABLED = process.env.RULE2_ENABLED === 'true';
 const RULE2_THRESHOLD = parseFloat(process.env.RULE2_THRESHOLD || '20');
 
+// Rule 3: Recovery Signal - dropped >X% in 5 days but UP >Y% today
+const RULE3_ENABLED = process.env.RULE3_ENABLED === 'true';
+const RULE3_THRESHOLD1 = parseFloat(process.env.RULE3_THRESHOLD1 || '10'); // 5-day drop
+const RULE3_THRESHOLD2 = parseFloat(process.env.RULE3_THRESHOLD2 || '3');  // today's gain
+
+// Rule 4: Near 52-Week Low - within X% of 52-week low
+const RULE4_ENABLED = process.env.RULE4_ENABLED === 'true';
+const RULE4_THRESHOLD = parseFloat(process.env.RULE4_THRESHOLD || '5');
+
+// Rule 5: Bounce Back - dropped >X% yesterday but up >Y% today
+const RULE5_ENABLED = process.env.RULE5_ENABLED === 'true';
+const RULE5_THRESHOLD1 = parseFloat(process.env.RULE5_THRESHOLD1 || '5'); // yesterday drop
+const RULE5_THRESHOLD2 = parseFloat(process.env.RULE5_THRESHOLD2 || '2'); // today gain
+
+// Rule 6: High Volume Surge - up with volume >X times average
+const RULE6_ENABLED = process.env.RULE6_ENABLED === 'true';
+const RULE6_THRESHOLD1 = parseFloat(process.env.RULE6_THRESHOLD1 || '3'); // % up
+const RULE6_THRESHOLD2 = parseFloat(process.env.RULE6_THRESHOLD2 || '2'); // volume multiplier
+
 // S&P 500 stocks list
 const STOCKS_TO_MONITOR = [
     // Technology
@@ -100,16 +119,15 @@ const STOCKS_TO_MONITOR = [
 /**
  * Fetch stock data from Yahoo Finance
  * @param {string} symbol - Stock symbol
- * @param {string} range - Time range ('1d' or '5d')
  */
-async function fetchStockData(symbol, range = '1d') {
+async function fetchStockData(symbol) {
     return new Promise((resolve, reject) => {
         // Handle special symbols like BRK.B
         const encodedSymbol = symbol.replace('.', '-');
 
         const options = {
             hostname: 'query1.finance.yahoo.com',
-            path: `/v8/finance/chart/${encodedSymbol}?range=${range}&interval=1d`,
+            path: `/v8/finance/chart/${encodedSymbol}?range=5d&interval=1d`,
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -130,19 +148,59 @@ async function fetchStockData(symbol, range = '1d') {
                     }
                     const result = json.chart.result[0];
                     const meta = result.meta;
-                    const closes = result.indicators.quote[0].close;
+                    const quotes = result.indicators.quote[0];
+                    const closes = quotes.close;
+                    const volumes = quotes.volume;
 
                     const currentPrice = meta.regularMarketPrice;
                     const previousClose = meta.previousClose || meta.chartPreviousClose;
+                    const fiftyTwoWeekLow = meta.fiftyTwoWeekLow;
+                    const fiftyTwoWeekHigh = meta.fiftyTwoWeekHigh;
+
+                    // Today's change
                     const change1d = ((currentPrice - previousClose) / previousClose) * 100;
 
                     // Calculate 2-day change if we have enough data
                     let change2d = null;
                     if (closes && closes.length >= 2) {
-                        // Get close from 2 days ago
-                        const twoDaysAgoClose = closes[0];
+                        const twoDaysAgoClose = closes[closes.length - 2];
                         if (twoDaysAgoClose) {
                             change2d = ((currentPrice - twoDaysAgoClose) / twoDaysAgoClose) * 100;
+                        }
+                    }
+
+                    // Calculate 5-day change (for recovery signal)
+                    let change5d = null;
+                    if (closes && closes.length >= 5) {
+                        const fiveDaysAgoClose = closes[0];
+                        if (fiveDaysAgoClose) {
+                            change5d = ((currentPrice - fiveDaysAgoClose) / fiveDaysAgoClose) * 100;
+                        }
+                    }
+
+                    // Yesterday's change (for bounce back)
+                    let yesterdayChange = null;
+                    if (closes && closes.length >= 3) {
+                        const dayBeforeYesterday = closes[closes.length - 3];
+                        const yesterday = closes[closes.length - 2];
+                        if (dayBeforeYesterday && yesterday) {
+                            yesterdayChange = ((yesterday - dayBeforeYesterday) / dayBeforeYesterday) * 100;
+                        }
+                    }
+
+                    // Distance from 52-week low
+                    let distanceFrom52wLow = null;
+                    if (fiftyTwoWeekLow && fiftyTwoWeekLow > 0) {
+                        distanceFrom52wLow = ((currentPrice - fiftyTwoWeekLow) / fiftyTwoWeekLow) * 100;
+                    }
+
+                    // Volume analysis (today vs average)
+                    let volumeRatio = null;
+                    if (volumes && volumes.length >= 2) {
+                        const todayVolume = volumes[volumes.length - 1];
+                        const avgVolume = volumes.slice(0, -1).reduce((a, b) => a + (b || 0), 0) / (volumes.length - 1);
+                        if (avgVolume > 0 && todayVolume) {
+                            volumeRatio = todayVolume / avgVolume;
                         }
                     }
 
@@ -152,7 +210,13 @@ async function fetchStockData(symbol, range = '1d') {
                         price: currentPrice,
                         previousClose: previousClose,
                         change1d: change1d,
-                        change2d: change2d
+                        change2d: change2d,
+                        change5d: change5d,
+                        yesterdayChange: yesterdayChange,
+                        fiftyTwoWeekLow: fiftyTwoWeekLow,
+                        fiftyTwoWeekHigh: fiftyTwoWeekHigh,
+                        distanceFrom52wLow: distanceFrom52wLow,
+                        volumeRatio: volumeRatio
                     });
                 } catch (e) {
                     reject(e);
@@ -168,7 +232,7 @@ async function fetchStockData(symbol, range = '1d') {
 /**
  * Send alert to Slack
  */
-async function sendSlackAlert(rule1Stocks, rule2Stocks) {
+async function sendSlackAlert(alerts) {
     return new Promise((resolve, reject) => {
         if (!SLACK_WEBHOOK_URL) {
             reject(new Error('Slack webhook URL not configured'));
@@ -176,51 +240,144 @@ async function sendSlackAlert(rule1Stocks, rule2Stocks) {
         }
 
         const webhookUrl = new URL(SLACK_WEBHOOK_URL);
-        const blocks = [
-            {
+        const blocks = [];
+
+        // Check if we have any downside alerts
+        const hasDownside = alerts.rule1Stocks.length > 0 || alerts.rule2Stocks.length > 0;
+        // Check if we have any upside alerts
+        const hasUpside = alerts.rule3Stocks.length > 0 || alerts.rule4Stocks.length > 0 ||
+                          alerts.rule5Stocks.length > 0 || alerts.rule6Stocks.length > 0;
+
+        // DOWNSIDE ALERTS
+        if (hasDownside) {
+            blocks.push({
                 type: 'header',
                 text: {
                     type: 'plain_text',
-                    text: '📉 Stock Drop Alert',
+                    text: '📉 Stock Drop Alerts',
                     emoji: true
                 }
-            }
-        ];
+            });
 
-        // Rule 1: Daily drops
-        if (rule1Stocks.length > 0) {
-            const stockList = rule1Stocks.map(stock =>
-                `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`
-            ).join('\n');
+            // Rule 1: Daily drops
+            if (alerts.rule1Stocks.length > 0) {
+                const stockList = alerts.rule1Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`
+                ).join('\n');
 
-            blocks.push(
-                { type: 'divider' },
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: `*1-Day Drop (>${RULE1_THRESHOLD}%)* - ${rule1Stocks.length} stock(s):\n${stockList}`
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*1-Day Drop (>${RULE1_THRESHOLD}%)* - ${alerts.rule1Stocks.length} stock(s):\n${stockList}`
+                        }
                     }
-                }
-            );
+                );
+            }
+
+            // Rule 2: 2-day drops
+            if (alerts.rule2Stocks.length > 0) {
+                const stockList = alerts.rule2Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`
+                ).join('\n');
+
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*2-Day Drop (>${RULE2_THRESHOLD}%)* - ${alerts.rule2Stocks.length} stock(s):\n${stockList}`
+                        }
+                    }
+                );
+            }
         }
 
-        // Rule 2: 2-day drops
-        if (rule2Stocks.length > 0) {
-            const stockList = rule2Stocks.map(stock =>
-                `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`
-            ).join('\n');
-
-            blocks.push(
-                { type: 'divider' },
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: `*2-Day Drop (>${RULE2_THRESHOLD}%)* - ${rule2Stocks.length} stock(s):\n${stockList}`
-                    }
+        // UPSIDE ALERTS
+        if (hasUpside) {
+            blocks.push({
+                type: 'header',
+                text: {
+                    type: 'plain_text',
+                    text: '📈 Upside Potential Alerts',
+                    emoji: true
                 }
-            );
+            });
+
+            // Rule 3: Recovery Signal
+            if (alerts.rule3Stocks.length > 0) {
+                const stockList = alerts.rule3Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | 5d: ${stock.change5d.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
+                ).join('\n');
+
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*🔄 Recovery Signal* (5d drop >${RULE3_THRESHOLD1}%, today up >${RULE3_THRESHOLD2}%) - ${alerts.rule3Stocks.length} stock(s):\n${stockList}`
+                        }
+                    }
+                );
+            }
+
+            // Rule 4: Near 52-Week Low
+            if (alerts.rule4Stocks.length > 0) {
+                const stockList = alerts.rule4Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLow.toFixed(2)}%* from low)`
+                ).join('\n');
+
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*📍 Near 52-Week Low* (within ${RULE4_THRESHOLD}%) - ${alerts.rule4Stocks.length} stock(s):\n${stockList}`
+                        }
+                    }
+                );
+            }
+
+            // Rule 5: Bounce Back
+            if (alerts.rule5Stocks.length > 0) {
+                const stockList = alerts.rule5Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | Yesterday: ${stock.yesterdayChange.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
+                ).join('\n');
+
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*↩️ Bounce Back* (yesterday drop >${RULE5_THRESHOLD1}%, today up >${RULE5_THRESHOLD2}%) - ${alerts.rule5Stocks.length} stock(s):\n${stockList}`
+                        }
+                    }
+                );
+            }
+
+            // Rule 6: High Volume Surge
+            if (alerts.rule6Stocks.length > 0) {
+                const stockList = alerts.rule6Stocks.map(stock =>
+                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | Today: *+${stock.change1d.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`
+                ).join('\n');
+
+                blocks.push(
+                    { type: 'divider' },
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `*🔥 High Volume Surge* (up >${RULE6_THRESHOLD1}%, volume >${RULE6_THRESHOLD2}x avg) - ${alerts.rule6Stocks.length} stock(s):\n${stockList}`
+                        }
+                    }
+                );
+            }
         }
 
         blocks.push(
@@ -272,12 +429,18 @@ async function sendSlackAlert(rule1Stocks, rule2Stocks) {
  */
 exports.handler = async (event) => {
     console.log('Stock Alert Lambda triggered');
-    console.log('Rule 1 (1-day):', RULE1_ENABLED, 'threshold:', RULE1_THRESHOLD);
-    console.log('Rule 2 (2-day):', RULE2_ENABLED, 'threshold:', RULE2_THRESHOLD);
+    console.log('Rule 1 (1-day drop):', RULE1_ENABLED, 'threshold:', RULE1_THRESHOLD);
+    console.log('Rule 2 (2-day drop):', RULE2_ENABLED, 'threshold:', RULE2_THRESHOLD);
+    console.log('Rule 3 (recovery):', RULE3_ENABLED, 'thresholds:', RULE3_THRESHOLD1, RULE3_THRESHOLD2);
+    console.log('Rule 4 (52w low):', RULE4_ENABLED, 'threshold:', RULE4_THRESHOLD);
+    console.log('Rule 5 (bounce):', RULE5_ENABLED, 'thresholds:', RULE5_THRESHOLD1, RULE5_THRESHOLD2);
+    console.log('Rule 6 (volume):', RULE6_ENABLED, 'thresholds:', RULE6_THRESHOLD1, RULE6_THRESHOLD2);
 
     const forceRun = event.forceRun === true;
+    const anyRuleEnabled = RULE1_ENABLED || RULE2_ENABLED || RULE3_ENABLED ||
+                           RULE4_ENABLED || RULE5_ENABLED || RULE6_ENABLED;
 
-    if (!RULE1_ENABLED && !RULE2_ENABLED && !forceRun) {
+    if (!anyRuleEnabled && !forceRun) {
         console.log('All rules are disabled. Exiting.');
         return {
             statusCode: 200,
@@ -297,13 +460,12 @@ exports.handler = async (event) => {
         const validStocks = [];
 
         // Process in batches of 15 with delays
-        // Use 5d range to get 2-day data for rule 2
         const batchSize = 15;
         for (let i = 0; i < STOCKS_TO_MONITOR.length; i += batchSize) {
             const batch = STOCKS_TO_MONITOR.slice(i, i + batchSize);
 
             const batchPromises = batch.map(symbol =>
-                fetchStockData(symbol, '5d').catch(err => {
+                fetchStockData(symbol).catch(err => {
                     console.error(`Error fetching ${symbol}:`, err.message);
                     return null;
                 })
@@ -320,44 +482,94 @@ exports.handler = async (event) => {
 
         console.log(`Successfully fetched ${validStocks.length} stocks`);
 
-        // Rule 1: Filter stocks that dropped more than threshold in 1 day
+        // DOWNSIDE RULES
+        // Rule 1: Stocks that dropped more than threshold in 1 day
         const rule1Stocks = (RULE1_ENABLED || forceRun) ? validStocks
             .filter(stock => stock.change1d <= -RULE1_THRESHOLD)
             .sort((a, b) => a.change1d - b.change1d) : [];
 
-        // Rule 2: Filter stocks that dropped more than threshold in 2 days
+        // Rule 2: Stocks that dropped more than threshold in 2 days
         const rule2Stocks = (RULE2_ENABLED || forceRun) ? validStocks
             .filter(stock => stock.change2d !== null && stock.change2d <= -RULE2_THRESHOLD)
             .sort((a, b) => a.change2d - b.change2d) : [];
 
-        console.log(`Rule 1: Found ${rule1Stocks.length} stocks with 1-day drops > ${RULE1_THRESHOLD}%`);
-        console.log(`Rule 2: Found ${rule2Stocks.length} stocks with 2-day drops > ${RULE2_THRESHOLD}%`);
+        // UPSIDE RULES
+        // Rule 3: Recovery Signal - dropped >X% in 5 days but UP >Y% today
+        const rule3Stocks = (RULE3_ENABLED || forceRun) ? validStocks
+            .filter(stock =>
+                stock.change5d !== null &&
+                stock.change5d <= -RULE3_THRESHOLD1 &&
+                stock.change1d >= RULE3_THRESHOLD2
+            )
+            .sort((a, b) => b.change1d - a.change1d) : [];
 
-        if (rule1Stocks.length === 0 && rule2Stocks.length === 0) {
-            console.log('No significant drops detected. No alert sent.');
+        // Rule 4: Near 52-Week Low - within X% of 52-week low
+        const rule4Stocks = (RULE4_ENABLED || forceRun) ? validStocks
+            .filter(stock =>
+                stock.distanceFrom52wLow !== null &&
+                stock.distanceFrom52wLow >= 0 &&
+                stock.distanceFrom52wLow <= RULE4_THRESHOLD
+            )
+            .sort((a, b) => a.distanceFrom52wLow - b.distanceFrom52wLow) : [];
+
+        // Rule 5: Bounce Back - dropped >X% yesterday but up >Y% today
+        const rule5Stocks = (RULE5_ENABLED || forceRun) ? validStocks
+            .filter(stock =>
+                stock.yesterdayChange !== null &&
+                stock.yesterdayChange <= -RULE5_THRESHOLD1 &&
+                stock.change1d >= RULE5_THRESHOLD2
+            )
+            .sort((a, b) => b.change1d - a.change1d) : [];
+
+        // Rule 6: High Volume Surge - up with volume >X times average
+        const rule6Stocks = (RULE6_ENABLED || forceRun) ? validStocks
+            .filter(stock =>
+                stock.volumeRatio !== null &&
+                stock.change1d >= RULE6_THRESHOLD1 &&
+                stock.volumeRatio >= RULE6_THRESHOLD2
+            )
+            .sort((a, b) => b.volumeRatio - a.volumeRatio) : [];
+
+        console.log(`Rule 1 (1d drop): Found ${rule1Stocks.length} stocks`);
+        console.log(`Rule 2 (2d drop): Found ${rule2Stocks.length} stocks`);
+        console.log(`Rule 3 (recovery): Found ${rule3Stocks.length} stocks`);
+        console.log(`Rule 4 (52w low): Found ${rule4Stocks.length} stocks`);
+        console.log(`Rule 5 (bounce): Found ${rule5Stocks.length} stocks`);
+        console.log(`Rule 6 (volume): Found ${rule6Stocks.length} stocks`);
+
+        const totalAlerts = rule1Stocks.length + rule2Stocks.length + rule3Stocks.length +
+                           rule4Stocks.length + rule5Stocks.length + rule6Stocks.length;
+
+        if (totalAlerts === 0) {
+            console.log('No alerts to send.');
             return {
                 statusCode: 200,
-                body: JSON.stringify({ message: 'No significant drops detected' })
+                body: JSON.stringify({ message: 'No alerts to send' })
             };
         }
 
         // Send Slack alert
         console.log('Sending Slack alert...');
-        await sendSlackAlert(rule1Stocks, rule2Stocks);
+        await sendSlackAlert({
+            rule1Stocks,
+            rule2Stocks,
+            rule3Stocks,
+            rule4Stocks,
+            rule5Stocks,
+            rule6Stocks
+        });
         console.log('Slack alert sent successfully!');
 
         return {
             statusCode: 200,
             body: JSON.stringify({
                 message: 'Alert sent successfully',
-                rule1Stocks: rule1Stocks.map(s => ({
-                    symbol: s.symbol,
-                    drop: `${s.change1d.toFixed(2)}%`
-                })),
-                rule2Stocks: rule2Stocks.map(s => ({
-                    symbol: s.symbol,
-                    drop: `${s.change2d.toFixed(2)}%`
-                }))
+                rule1Stocks: rule1Stocks.map(s => ({ symbol: s.symbol, drop: `${s.change1d.toFixed(2)}%` })),
+                rule2Stocks: rule2Stocks.map(s => ({ symbol: s.symbol, drop: `${s.change2d.toFixed(2)}%` })),
+                rule3Stocks: rule3Stocks.map(s => ({ symbol: s.symbol, change5d: `${s.change5d.toFixed(2)}%`, today: `+${s.change1d.toFixed(2)}%` })),
+                rule4Stocks: rule4Stocks.map(s => ({ symbol: s.symbol, distance: `${s.distanceFrom52wLow.toFixed(2)}%` })),
+                rule5Stocks: rule5Stocks.map(s => ({ symbol: s.symbol, yesterday: `${s.yesterdayChange.toFixed(2)}%`, today: `+${s.change1d.toFixed(2)}%` })),
+                rule6Stocks: rule6Stocks.map(s => ({ symbol: s.symbol, change: `+${s.change1d.toFixed(2)}%`, volume: `${s.volumeRatio.toFixed(1)}x` }))
             })
         };
 
