@@ -1,58 +1,317 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Stock Drop Alert Lambda Function
+Description: Stock Alert System - Independent Rule Agents Architecture
 
 Parameters:
   SlackWebhookUrl:
     Type: String
     Description: Slack Incoming Webhook URL
     NoEcho: true
-  DropThreshold:
-    Type: String
-    Default: '5'
-    Description: Percentage drop threshold for alerts
-  AlertEnabled:
-    Type: String
-    Default: 'true'
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Description: Enable or disable alerts
 
 Resources:
-  StockAlertFunction:
+  # ============================================
+  # Lambda Layer - Shared Utilities
+  # ============================================
+  StockUtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: stock-utils
+      Description: Shared utilities for stock alert rules
+      ContentUri: layers/stock-utils/
+      CompatibleRuntimes:
+        - nodejs18.x
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: nodejs18.x
+
+  # ============================================
+  # Rule 1: Daily Drop Alert
+  # ============================================
+  Rule1Function:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: stock-drop-alert
-      Handler: stock-alerts.handler
+      FunctionName: stock-alert-rule1
+      Handler: rules/rule1-daily-drop.handler
       Runtime: nodejs18.x
-      Timeout: 60
+      Timeout: 180
       MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
       Environment:
         Variables:
           SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
-          DROP_THRESHOLD: !Ref DropThreshold
-          ALERT_ENABLED: !Ref AlertEnabled
+          RULE1_ENABLED: 'true'
+          RULE1_THRESHOLD: '15'
+
+  Rule1LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule1Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Rule 2: 2-Day Drop Alert
+  # ============================================
+  Rule2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-rule2
+      Handler: rules/rule2-two-day-drop.handler
+      Runtime: nodejs18.x
+      Timeout: 180
+      MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          RULE2_ENABLED: 'false'
+          RULE2_THRESHOLD: '20'
+
+  Rule2LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule2Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Rule 3: Recovery Signal
+  # ============================================
+  Rule3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-rule3
+      Handler: rules/rule3-recovery-signal.handler
+      Runtime: nodejs18.x
+      Timeout: 180
+      MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          RULE3_ENABLED: 'false'
+          RULE3_THRESHOLD1: '10'
+          RULE3_THRESHOLD2: '3'
+
+  Rule3LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule3Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Rule 4: Near 52-Week Low
+  # ============================================
+  Rule4Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-rule4
+      Handler: rules/rule4-near-52w-low.handler
+      Runtime: nodejs18.x
+      Timeout: 180
+      MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          RULE4_ENABLED: 'false'
+          RULE4_THRESHOLD: '5'
+
+  Rule4LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule4Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Rule 5: Bounce Back
+  # ============================================
+  Rule5Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-rule5
+      Handler: rules/rule5-bounce-back.handler
+      Runtime: nodejs18.x
+      Timeout: 180
+      MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          RULE5_ENABLED: 'false'
+          RULE5_THRESHOLD1: '5'
+          RULE5_THRESHOLD2: '2'
+
+  Rule5LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule5Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Rule 6: High Volume Surge
+  # ============================================
+  Rule6Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-rule6
+      Handler: rules/rule6-volume-surge.handler
+      Runtime: nodejs18.x
+      Timeout: 180
+      MemorySize: 256
+      Layers:
+        - !Ref StockUtilsLayer
+      Environment:
+        Variables:
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          RULE6_ENABLED: 'false'
+          RULE6_THRESHOLD1: '3'
+          RULE6_THRESHOLD2: '2'
+
+  Rule6LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Rule6Function}
+      RetentionInDays: 14
+
+  # ============================================
+  # Orchestrator Function
+  # ============================================
+  OrchestratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alert-orchestrator
+      Handler: orchestrator.handler
+      Runtime: nodejs18.x
+      Timeout: 30
+      MemorySize: 128
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt Rule1Function.Arn
+                - !GetAtt Rule2Function.Arn
+                - !GetAtt Rule3Function.Arn
+                - !GetAtt Rule4Function.Arn
+                - !GetAtt Rule5Function.Arn
+                - !GetAtt Rule6Function.Arn
       Events:
         DailySchedule:
           Type: Schedule
           Properties:
-            # 10:00 AM EST = 15:00 UTC (or 14:00 UTC during DST)
-            # Using 15:00 UTC for standard time
             Schedule: cron(0 15 ? * MON-FRI *)
-            Description: Run stock alert check at 10:00 AM EST on weekdays
+            Description: Run all stock alert rules at 10:00 AM EST on weekdays
             Enabled: true
 
-  StockAlertFunctionLogGroup:
+  OrchestratorLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${StockAlertFunction}
+      LogGroupName: !Sub /aws/lambda/${OrchestratorFunction}
+      RetentionInDays: 14
+
+  # ============================================
+  # Config API Function
+  # ============================================
+  ConfigApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stock-alerts-config-api
+      Handler: config-api.handler
+      Runtime: nodejs18.x
+      Timeout: 90
+      MemorySize: 256
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt Rule1Function.Arn
+                - !GetAtt Rule2Function.Arn
+                - !GetAtt Rule3Function.Arn
+                - !GetAtt Rule4Function.Arn
+                - !GetAtt Rule5Function.Arn
+                - !GetAtt Rule6Function.Arn
+                - !GetAtt OrchestratorFunction.Arn
+            - Effect: Allow
+              Action:
+                - lambda:GetFunctionConfiguration
+                - lambda:UpdateFunctionConfiguration
+              Resource:
+                - !GetAtt Rule1Function.Arn
+                - !GetAtt Rule2Function.Arn
+                - !GetAtt Rule3Function.Arn
+                - !GetAtt Rule4Function.Arn
+                - !GetAtt Rule5Function.Arn
+                - !GetAtt Rule6Function.Arn
+      Events:
+        GetConfig:
+          Type: HttpApi
+          Properties:
+            Path: /config
+            Method: GET
+        UpdateConfig:
+          Type: HttpApi
+          Properties:
+            Path: /config
+            Method: POST
+        RunAll:
+          Type: HttpApi
+          Properties:
+            Path: /run
+            Method: POST
+        RunSingleRule:
+          Type: HttpApi
+          Properties:
+            Path: /rule/{ruleId}/run
+            Method: POST
+
+  ConfigApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ConfigApiFunction}
       RetentionInDays: 14
 
 Outputs:
-  FunctionArn:
-    Description: Stock Alert Lambda Function ARN
-    Value: !GetAtt StockAlertFunction.Arn
-  FunctionName:
-    Description: Stock Alert Lambda Function Name
-    Value: !Ref StockAlertFunction
+  StockUtilsLayerArn:
+    Description: Stock Utils Lambda Layer ARN
+    Value: !Ref StockUtilsLayer
+
+  Rule1FunctionArn:
+    Description: Rule 1 Function ARN
+    Value: !GetAtt Rule1Function.Arn
+
+  Rule2FunctionArn:
+    Description: Rule 2 Function ARN
+    Value: !GetAtt Rule2Function.Arn
+
+  Rule3FunctionArn:
+    Description: Rule 3 Function ARN
+    Value: !GetAtt Rule3Function.Arn
+
+  Rule4FunctionArn:
+    Description: Rule 4 Function ARN
+    Value: !GetAtt Rule4Function.Arn
+
+  Rule5FunctionArn:
+    Description: Rule 5 Function ARN
+    Value: !GetAtt Rule5Function.Arn
+
+  Rule6FunctionArn:
+    Description: Rule 6 Function ARN
+    Value: !GetAtt Rule6Function.Arn
+
+  OrchestratorFunctionArn:
+    Description: Orchestrator Function ARN
+    Value: !GetAtt OrchestratorFunction.Arn
+
+  ConfigApiUrl:
+    Description: Config API Gateway URL
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/config'

@@ -157,6 +157,30 @@
             font-weight: 600;
         }
 
+        .test-rule-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #6c5ce7 0%, #5f3dc4 100%);
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .test-rule-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+        }
+
+        .test-rule-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .schedule-note {
             background: rgba(0, 212, 255, 0.1);
             border-left: 3px solid #00d4ff;
@@ -292,6 +316,7 @@
                         <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
                         <span class="config-unit">%</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="1">Test Rule 1</button>
                 </div>
 
                 <!-- Rule 2: 2-Day Drop -->
@@ -308,6 +333,7 @@
                         <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
                         <span class="config-unit">%</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="2">Test Rule 2</button>
                 </div>
 
                 <div class="section-divider">
@@ -332,6 +358,7 @@
                         <span class="config-unit">%</span>
                         <span class="config-label">today</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="3">Test Rule 3</button>
                 </div>
 
                 <!-- Rule 4: Near 52-Week Low -->
@@ -349,6 +376,7 @@
                         <span class="config-unit">%</span>
                         <span class="config-label">of 52-week low</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="4">Test Rule 4</button>
                 </div>
 
                 <!-- Rule 5: Bounce Back -->
@@ -369,6 +397,7 @@
                         <span class="config-unit">%</span>
                         <span class="config-label">today</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="5">Test Rule 5</button>
                 </div>
 
                 <!-- Rule 6: High Volume Surge -->
@@ -389,6 +418,7 @@
                         <span class="config-unit">x</span>
                         <span class="config-label">avg</span>
                     </div>
+                    <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
                 </div>
 
                 <div class="schedule-note">
@@ -516,8 +546,48 @@
             }
         }
 
+        // Test individual rule
+        async function testRule(ruleId) {
+            const status = document.getElementById('status');
+            const btn = document.querySelector(`button[data-rule="${ruleId}"]`);
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Testing...';
+            }
+            status.className = 'status';
+
+            try {
+                const response = await fetch(`${API_URL}/rule/${ruleId}/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    status.textContent = `Rule ${ruleId} test started! Check Slack for results.`;
+                    status.className = 'status success';
+                } else {
+                    throw new Error('Test failed');
+                }
+            } catch (error) {
+                status.textContent = `Error testing Rule ${ruleId}`;
+                status.className = 'status error';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = `Test Rule ${ruleId}`;
+                }
+            }
+        }
+
         document.getElementById('saveBtn').addEventListener('click', saveSettings);
         document.getElementById('runBtn').addEventListener('click', runNow);
+
+        // Add event listeners to all test rule buttons
+        document.querySelectorAll('.test-rule-btn').forEach(btn => {
+            btn.addEventListener('click', () => testRule(btn.dataset.rule));
+        });
+
         loadSettings();
     </script>
 </body>

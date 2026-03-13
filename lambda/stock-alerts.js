@@ -230,6 +230,45 @@ async function fetchStockData(symbol) {
 }
 
 /**
+ * Escape special characters in company names for Slack mrkdwn
+ */
+function sanitizeName(name) {
+    return name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Build section blocks for a stock list, splitting if the text exceeds Slack's 3000-char limit
+ */
+function stockListToBlocks(header, stockLines) {
+    const LIMIT = 2500;
+    const resultBlocks = [];
+    let currentLines = [];
+    let isFirst = true;
+
+    for (const line of stockLines) {
+        currentLines.push(line);
+        const text = isFirst ? `${header}\n${currentLines.join('\n')}` : currentLines.join('\n');
+        if (text.length > LIMIT) {
+            // Flush all but the last line
+            currentLines.pop();
+            const flushText = isFirst ? `${header}\n${currentLines.join('\n')}` : currentLines.join('\n');
+            resultBlocks.push({ type: 'divider' });
+            resultBlocks.push({ type: 'section', text: { type: 'mrkdwn', text: flushText } });
+            currentLines = [line];
+            isFirst = false;
+        }
+    }
+
+    if (currentLines.length > 0) {
+        const text = isFirst ? `${header}\n${currentLines.join('\n')}` : currentLines.join('\n');
+        resultBlocks.push({ type: 'divider' });
+        resultBlocks.push({ type: 'section', text: { type: 'mrkdwn', text } });
+    }
+
+    return resultBlocks;
+}
+
+/**
  * Send alert to Slack
  */
 async function sendSlackAlert(alerts) {
@@ -261,38 +300,18 @@ async function sendSlackAlert(alerts) {
 
             // Rule 1: Daily drops
             if (alerts.rule1Stocks.length > 0) {
-                const stockList = alerts.rule1Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*1-Day Drop (>${RULE1_THRESHOLD}%)* - ${alerts.rule1Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule1Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`
                 );
+                blocks.push(...stockListToBlocks(`*1-Day Drop (>${RULE1_THRESHOLD}%)* - ${alerts.rule1Stocks.length} stock(s):`, lines));
             }
 
             // Rule 2: 2-day drops
             if (alerts.rule2Stocks.length > 0) {
-                const stockList = alerts.rule2Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*2-Day Drop (>${RULE2_THRESHOLD}%)* - ${alerts.rule2Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule2Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`
                 );
+                blocks.push(...stockListToBlocks(`*2-Day Drop (>${RULE2_THRESHOLD}%)* - ${alerts.rule2Stocks.length} stock(s):`, lines));
             }
         }
 
@@ -309,74 +328,34 @@ async function sendSlackAlert(alerts) {
 
             // Rule 3: Recovery Signal
             if (alerts.rule3Stocks.length > 0) {
-                const stockList = alerts.rule3Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | 5d: ${stock.change5d.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*🔄 Recovery Signal* (5d drop >${RULE3_THRESHOLD1}%, today up >${RULE3_THRESHOLD2}%) - ${alerts.rule3Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule3Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} | 5d: ${stock.change5d.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
                 );
+                blocks.push(...stockListToBlocks(`*🔄 Recovery Signal* (5d drop >${RULE3_THRESHOLD1}%, today up >${RULE3_THRESHOLD2}%) - ${alerts.rule3Stocks.length} stock(s):`, lines));
             }
 
             // Rule 4: Near 52-Week Low
             if (alerts.rule4Stocks.length > 0) {
-                const stockList = alerts.rule4Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLow.toFixed(2)}%* from low)`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*📍 Near 52-Week Low* (within ${RULE4_THRESHOLD}%) - ${alerts.rule4Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule4Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLow.toFixed(2)}%* from low)`
                 );
+                blocks.push(...stockListToBlocks(`*📍 Near 52-Week Low* (within ${RULE4_THRESHOLD}%) - ${alerts.rule4Stocks.length} stock(s):`, lines));
             }
 
             // Rule 5: Bounce Back
             if (alerts.rule5Stocks.length > 0) {
-                const stockList = alerts.rule5Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | Yesterday: ${stock.yesterdayChange.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*↩️ Bounce Back* (yesterday drop >${RULE5_THRESHOLD1}%, today up >${RULE5_THRESHOLD2}%) - ${alerts.rule5Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule5Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} | Yesterday: ${stock.yesterdayChange.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`
                 );
+                blocks.push(...stockListToBlocks(`*↩️ Bounce Back* (yesterday drop >${RULE5_THRESHOLD1}%, today up >${RULE5_THRESHOLD2}%) - ${alerts.rule5Stocks.length} stock(s):`, lines));
             }
 
             // Rule 6: High Volume Surge
             if (alerts.rule6Stocks.length > 0) {
-                const stockList = alerts.rule6Stocks.map(stock =>
-                    `• *${stock.symbol}*: $${stock.price.toFixed(2)} | Today: *+${stock.change1d.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`
-                ).join('\n');
-
-                blocks.push(
-                    { type: 'divider' },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*🔥 High Volume Surge* (up >${RULE6_THRESHOLD1}%, volume >${RULE6_THRESHOLD2}x avg) - ${alerts.rule6Stocks.length} stock(s):\n${stockList}`
-                        }
-                    }
+                const lines = alerts.rule6Stocks.map(stock =>
+                    `• *${stock.symbol}* (${sanitizeName(stock.name)}): $${stock.price.toFixed(2)} | Today: *+${stock.change1d.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`
                 );
+                blocks.push(...stockListToBlocks(`*🔥 High Volume Surge* (up >${RULE6_THRESHOLD1}%, volume >${RULE6_THRESHOLD2}x avg) - ${alerts.rule6Stocks.length} stock(s):`, lines));
             }
         }
 

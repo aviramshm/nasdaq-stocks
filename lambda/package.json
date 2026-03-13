@@ -1,0 +1,8 @@
+{
+  "name": "stock-alerts-lambda",
+  "version": "2.0.0",
+  "description": "Stock Alerts Independent Rule Agents",
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.400.0"
+  }
+}
