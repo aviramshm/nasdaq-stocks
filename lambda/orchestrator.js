@@ -13,7 +13,8 @@ const RULE_FUNCTIONS = [
     'stock-alert-rule3',
     'stock-alert-rule4',
     'stock-alert-rule5',
-    'stock-alert-rule6'
+    'stock-alert-rule6',
+    'stock-alert-rule7'
 ];
 
 exports.handler = async (event) => {

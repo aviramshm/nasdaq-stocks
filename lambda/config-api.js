@@ -15,7 +15,8 @@ const RULE_FUNCTIONS = {
     rule3: 'stock-alert-rule3',
     rule4: 'stock-alert-rule4',
     rule5: 'stock-alert-rule5',
-    rule6: 'stock-alert-rule6'
+    rule6: 'stock-alert-rule6',
+    rule7: 'stock-alert-rule7'
 };
 
 const ORCHESTRATOR_FUNCTION = 'stock-alert-orchestrator';
@@ -122,6 +123,9 @@ async function getConfig() {
             mergedConfig.rule6Enabled = env.RULE6_ENABLED === 'true';
             mergedConfig.rule6Threshold1 = parseFloat(env.RULE6_THRESHOLD1 || '3');
             mergedConfig.rule6Threshold2 = parseFloat(env.RULE6_THRESHOLD2 || '2');
+        } else if (ruleNum === '7') {
+            mergedConfig.rule7Enabled = env.RULE7_ENABLED === 'true';
+            mergedConfig.rule7Days = parseInt(env.RULE7_DAYS || '3', 10);
         }
     });
 
@@ -219,6 +223,9 @@ async function updateConfig(config) {
                 newEnv.RULE6_ENABLED = String(config.rule6Enabled === true);
                 newEnv.RULE6_THRESHOLD1 = String(config.rule6Threshold1 || 3);
                 newEnv.RULE6_THRESHOLD2 = String(config.rule6Threshold2 || 2);
+            } else if (ruleNum === '7') {
+                newEnv.RULE7_ENABLED = String(config.rule7Enabled === true);
+                newEnv.RULE7_DAYS = String(config.rule7Days || 3);
             }
 
             const updateCommand = new UpdateFunctionConfigurationCommand({

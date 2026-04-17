@@ -421,6 +421,24 @@
                     <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
                 </div>
 
+                <!-- Rule 7: Consecutive Drop + All-Time Low -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">Consecutive Drop + All-Time Low</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule7Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped every day for</span>
+                        <input type="number" id="rule7Days" class="config-input" value="3" min="2" max="10" step="1">
+                        <span class="config-unit">days</span>
+                        <span class="config-label">and at all-time low</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="7">Test Rule 7</button>
+                </div>
+
                 <div class="schedule-note">
                     Runs daily at <strong>10:00 AM EST</strong> on weekdays.<br>
                     Alerts sent to <strong>#stock-alerts</strong> on Slack.
@@ -460,6 +478,8 @@
                     document.getElementById('rule6Toggle').checked = settings.rule6Enabled;
                     document.getElementById('rule6Threshold1').value = settings.rule6Threshold1 || 3;
                     document.getElementById('rule6Threshold2').value = settings.rule6Threshold2 || 2;
+                    document.getElementById('rule7Toggle').checked = settings.rule7Enabled;
+                    document.getElementById('rule7Days').value = settings.rule7Days || 3;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -487,7 +507,9 @@
                 rule5Threshold2: parseFloat(document.getElementById('rule5Threshold2').value),
                 rule6Enabled: document.getElementById('rule6Toggle').checked,
                 rule6Threshold1: parseFloat(document.getElementById('rule6Threshold1').value),
-                rule6Threshold2: parseFloat(document.getElementById('rule6Threshold2').value)
+                rule6Threshold2: parseFloat(document.getElementById('rule6Threshold2').value),
+                rule7Enabled: document.getElementById('rule7Toggle').checked,
+                rule7Days: parseInt(document.getElementById('rule7Days').value)
             };
 
             btn.disabled = true;
