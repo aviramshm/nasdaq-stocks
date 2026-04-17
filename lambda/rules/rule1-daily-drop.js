@@ -1,6 +1,6 @@
 /**
  * Rule 1: Daily Drop Alert
- * Triggers when a stock drops more than threshold % in 1 day
+ * Triggers when a stock dropped more than threshold % yesterday (completed trading day)
  */
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
 const { sendSlackAlert, formatSingleRuleBlocks } = require('stock-utils/slack-notifier');
@@ -33,23 +33,22 @@ exports.handler = async (event) => {
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR);
 
-        // Apply rule-specific filtering
+        // Apply rule-specific filtering — use yesterdayChange (completed trading day)
         const matchingStocks = stocks
-            .filter(stock => stock.change1d <= -threshold)
-            .sort((a, b) => a.change1d - b.change1d);
+            .filter(stock => stock.yesterdayChange !== null && stock.yesterdayChange <= -threshold)
+            .sort((a, b) => a.yesterdayChange - b.yesterdayChange);
 
         console.log(`Rule 1: Found ${matchingStocks.length} matching stocks`);
 
-        // Send Slack alert if matches found
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule1',
                 ruleName: '1-Day Drop Alert',
                 ruleEmoji: '📉',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.change1d.toFixed(2)}%*`,
+                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.yesterdayChange.toFixed(2)}%* yesterday`,
                 config: {
-                    description: `*Stocks that dropped more than ${threshold}%* - ${matchingStocks.length} stock(s):`
+                    description: `*Stocks that dropped more than ${threshold}% yesterday* - ${matchingStocks.length} stock(s):`
                 }
             });
 
@@ -66,7 +65,7 @@ exports.handler = async (event) => {
                 matches: matchingStocks.length,
                 stocks: matchingStocks.map(s => ({
                     symbol: s.symbol,
-                    change: `${s.change1d.toFixed(2)}%`
+                    change: `${s.yesterdayChange.toFixed(2)}%`
                 }))
             })
         };

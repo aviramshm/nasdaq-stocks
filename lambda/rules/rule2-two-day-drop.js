@@ -1,6 +1,7 @@
 /**
  * Rule 2: 2-Day Drop Alert
- * Triggers when a stock drops more than threshold % over 2 days
+ * Triggers when a stock dropped more than threshold % over the last 2 completed trading days
+ * (yesterday's close vs 3 days ago close)
  */
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
 const { sendSlackAlert, formatSingleRuleBlocks } = require('stock-utils/slack-notifier');
@@ -33,23 +34,30 @@ exports.handler = async (event) => {
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR);
 
-        // Apply rule-specific filtering
+        // Apply rule-specific filtering — yesterday vs 3 days ago (2 completed trading days)
         const matchingStocks = stocks
-            .filter(stock => stock.change2d !== null && stock.change2d <= -threshold)
-            .sort((a, b) => a.change2d - b.change2d);
+            .filter(stock => {
+                const closes = (stock.closes || []).filter(c => c !== null);
+                if (closes.length < 4) return false;
+                const yesterday = closes[closes.length - 2];
+                const threeDaysAgo = closes[closes.length - 4];
+                if (!yesterday || !threeDaysAgo) return false;
+                stock.change2dCompleted = ((yesterday - threeDaysAgo) / threeDaysAgo) * 100;
+                return stock.change2dCompleted <= -threshold;
+            })
+            .sort((a, b) => a.change2dCompleted - b.change2dCompleted);
 
         console.log(`Rule 2: Found ${matchingStocks.length} matching stocks`);
 
-        // Send Slack alert if matches found
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule2',
                 ruleName: '2-Day Drop Alert',
                 ruleEmoji: '📉',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.change2d.toFixed(2)}%* (2d)`,
+                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.change2dCompleted.toFixed(2)}%* (2d)`,
                 config: {
-                    description: `*Stocks that dropped more than ${threshold}% over 2 days* - ${matchingStocks.length} stock(s):`
+                    description: `*Stocks that dropped more than ${threshold}% over the last 2 days* - ${matchingStocks.length} stock(s):`
                 }
             });
 
@@ -66,7 +74,7 @@ exports.handler = async (event) => {
                 matches: matchingStocks.length,
                 stocks: matchingStocks.map(s => ({
                     symbol: s.symbol,
-                    change: `${s.change2d.toFixed(2)}%`
+                    change: `${s.change2dCompleted.toFixed(2)}%`
                 }))
             })
         };
