@@ -305,16 +305,17 @@
                 <!-- Rule 1: Daily Drop -->
                 <div class="rule">
                     <div class="rule-header">
-                        <span class="rule-title">Daily Drop Alert</span>
+                        <span class="rule-title">1-Day Drop</span>
                         <label class="toggle-switch">
                             <input type="checkbox" id="rule1Toggle" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Drop in 1 day more than</span>
+                        <span class="config-label">Dropped more than</span>
                         <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
                         <span class="config-unit">%</span>
+                        <span class="config-label">vs yesterday's close</span>
                     </div>
                     <button class="test-rule-btn" data-rule="1">Test Rule 1</button>
                 </div>
@@ -322,16 +323,17 @@
                 <!-- Rule 2: 2-Day Drop -->
                 <div class="rule">
                     <div class="rule-header">
-                        <span class="rule-title">2-Day Drop Alert</span>
+                        <span class="rule-title">2-Day Drop</span>
                         <label class="toggle-switch">
                             <input type="checkbox" id="rule2Toggle">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Drop in 2 days more than</span>
+                        <span class="config-label">Dropped more than</span>
                         <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
                         <span class="config-unit">%</span>
+                        <span class="config-label">vs 2 days ago close</span>
                     </div>
                     <button class="test-rule-btn" data-rule="2">Test Rule 2</button>
                 </div>
@@ -371,10 +373,10 @@
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Within</span>
+                        <span class="config-label">Current price within</span>
                         <input type="number" id="rule4Threshold" class="config-input" value="5" min="1" max="20" step="0.5">
                         <span class="config-unit">%</span>
-                        <span class="config-label">of 52-week low</span>
+                        <span class="config-label">above its 52-week low</span>
                     </div>
                     <button class="test-rule-btn" data-rule="4">Test Rule 4</button>
                 </div>
@@ -413,10 +415,10 @@
                         <span class="config-label">Up more than</span>
                         <input type="number" id="rule6Threshold1" class="config-input" value="3" min="0.5" max="20" step="0.5">
                         <span class="config-unit">%</span>
-                        <span class="config-label">with volume</span>
+                        <span class="config-label">vs yesterday's close, with today's volume</span>
                         <input type="number" id="rule6Threshold2" class="config-input" value="2" min="1" max="10" step="0.5">
                         <span class="config-unit">x</span>
-                        <span class="config-label">avg</span>
+                        <span class="config-label">above average</span>
                     </div>
                     <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
                 </div>
@@ -431,10 +433,10 @@
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Dropped every day for</span>
+                        <span class="config-label">Closed lower every day for the last</span>
                         <input type="number" id="rule7Days" class="config-input" value="3" min="2" max="10" step="1">
                         <span class="config-unit">days</span>
-                        <span class="config-label">and at all-time low</span>
+                        <span class="config-label">and currently at its all-time low</span>
                     </div>
                     <button class="test-rule-btn" data-rule="7">Test Rule 7</button>
                 </div>
