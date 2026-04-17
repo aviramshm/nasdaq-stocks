@@ -1,6 +1,6 @@
 /**
  * Rule 5: Bounce Back
- * Triggers when a stock dropped >X% yesterday but is up >Y% today
+ * Triggers when a stock dropped >X% the day before yesterday and is up >Y% yesterday.
  */
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
 const { sendSlackAlert, formatSingleRuleBlocks } = require('stock-utils/slack-notifier');
@@ -10,17 +10,15 @@ exports.handler = async (event) => {
     console.log('Rule 5: Bounce Back triggered');
     console.log('Event:', JSON.stringify(event));
 
-    // Read configuration from environment variables
     const enabled = process.env.RULE5_ENABLED === 'true';
-    const threshold1 = parseFloat(process.env.RULE5_THRESHOLD1 || '5'); // yesterday drop
-    const threshold2 = parseFloat(process.env.RULE5_THRESHOLD2 || '2'); // today gain
+    const threshold1 = parseFloat(process.env.RULE5_THRESHOLD1 || '5'); // day-before-yesterday drop
+    const threshold2 = parseFloat(process.env.RULE5_THRESHOLD2 || '2'); // yesterday gain
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
     console.log('Enabled:', enabled);
-    console.log('Threshold1 (yesterday drop):', threshold1);
-    console.log('Threshold2 (today gain):', threshold2);
+    console.log('Threshold1 (day-before-yesterday drop):', threshold1);
+    console.log('Threshold2 (yesterday gain):', threshold2);
 
-    // Check if enabled (unless forceRun)
     const forceRun = event.forceRun === true;
     if (!enabled && !forceRun) {
         console.log('Rule 5 is disabled. Exiting.');
@@ -31,31 +29,36 @@ exports.handler = async (event) => {
     }
 
     try {
-        // Fetch stock data for all monitored stocks
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR);
 
-        // Apply rule-specific filtering
         const matchingStocks = stocks
-            .filter(stock =>
-                stock.yesterdayChange !== null &&
-                stock.yesterdayChange <= -threshold1 &&
-                stock.change1d >= threshold2
-            )
-            .sort((a, b) => b.change1d - a.change1d);
+            .filter(stock => {
+                const closes = (stock.closes || []).filter(c => c !== null);
+                // Need at least 4 points: closes[-4]=2 days ago open, [-3]=day-before-yesterday, [-2]=yesterday, [-1]=today
+                if (closes.length < 4) return false;
+                const dayBeforeYesterday = closes[closes.length - 3];
+                const twoDaysAgo = closes[closes.length - 4];
+                if (!dayBeforeYesterday || !twoDaysAgo) return false;
+                const dayBeforeYesterdayChange = ((dayBeforeYesterday - twoDaysAgo) / twoDaysAgo) * 100;
+                stock.dayBeforeYesterdayChange = dayBeforeYesterdayChange;
+                return dayBeforeYesterdayChange <= -threshold1 &&
+                       stock.yesterdayChange !== null &&
+                       stock.yesterdayChange >= threshold2;
+            })
+            .sort((a, b) => b.yesterdayChange - a.yesterdayChange);
 
         console.log(`Rule 5: Found ${matchingStocks.length} matching stocks`);
 
-        // Send Slack alert if matches found
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule5',
                 ruleName: 'Bounce Back',
                 ruleEmoji: '↩️',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | Yesterday: ${stock.yesterdayChange.toFixed(2)}% | Today: *+${stock.change1d.toFixed(2)}%*`,
+                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | Day before yesterday: ${stock.dayBeforeYesterdayChange.toFixed(2)}% | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%*`,
                 config: {
-                    description: `*Stocks that dropped >${threshold1}% yesterday but UP >${threshold2}% today* - ${matchingStocks.length} stock(s):`
+                    description: `*Dropped >${threshold1}% day before yesterday, UP >${threshold2}% yesterday* - ${matchingStocks.length} stock(s):`
                 }
             });
 
@@ -72,8 +75,8 @@ exports.handler = async (event) => {
                 matches: matchingStocks.length,
                 stocks: matchingStocks.map(s => ({
                     symbol: s.symbol,
-                    yesterday: `${s.yesterdayChange.toFixed(2)}%`,
-                    today: `+${s.change1d.toFixed(2)}%`
+                    dayBeforeYesterday: `${s.dayBeforeYesterdayChange.toFixed(2)}%`,
+                    yesterday: `+${s.yesterdayChange.toFixed(2)}%`
                 }))
             })
         };
