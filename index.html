@@ -442,8 +442,44 @@
                 </div>
 
                 <div class="schedule-note">
-                    Runs daily at <strong>10:00 AM EST</strong> on weekdays.<br>
+                    Rules 1–7 run daily at <strong>9:00 AM EST</strong> on weekdays (pre-market, based on yesterday's closes).<br>
                     Alerts sent to <strong>#stock-alerts</strong> on Slack.
+                </div>
+
+                <div class="section-divider">
+                    <span>3 PM EST Action Signal</span>
+                </div>
+
+                <!-- Rule 8: Oversold + Volume Reversal -->
+                <div class="rule" style="border-left: 3px solid #ffd700;">
+                    <div class="rule-header">
+                        <span class="rule-title">🎯 Oversold Reversal — Buy Signal</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule8Toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule8DropThreshold" class="config-input" value="10" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">over the last</span>
+                        <input type="number" id="rule8Days" class="config-input" value="5" min="2" max="20" step="1">
+                        <span class="config-unit">days</span>
+                        <span class="config-label">, up more than</span>
+                        <input type="number" id="rule8GainThreshold" class="config-input" value="3" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">today, with volume</span>
+                        <input type="number" id="rule8VolumeThreshold" class="config-input" value="1.5" min="1" max="10" step="0.5">
+                        <span class="config-unit">x</span>
+                        <span class="config-label">above average</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="8">Test Rule 8</button>
+                </div>
+
+                <div class="schedule-note" style="border-left-color: #ffd700;">
+                    Rule 8 runs daily at <strong>3:00 PM EST</strong> on weekdays (live intraday data).<br>
+                    Place buy orders <strong>before market close</strong> based on these signals.
                 </div>
 
                 <div class="buttons">
@@ -482,6 +518,11 @@
                     document.getElementById('rule6Threshold2').value = settings.rule6Threshold2 || 2;
                     document.getElementById('rule7Toggle').checked = settings.rule7Enabled;
                     document.getElementById('rule7Days').value = settings.rule7Days || 3;
+                    document.getElementById('rule8Toggle').checked = settings.rule8Enabled;
+                    document.getElementById('rule8Days').value = settings.rule8Days || 5;
+                    document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 10;
+                    document.getElementById('rule8GainThreshold').value = settings.rule8GainThreshold || 3;
+                    document.getElementById('rule8VolumeThreshold').value = settings.rule8VolumeThreshold || 1.5;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -511,7 +552,12 @@
                 rule6Threshold1: parseFloat(document.getElementById('rule6Threshold1').value),
                 rule6Threshold2: parseFloat(document.getElementById('rule6Threshold2').value),
                 rule7Enabled: document.getElementById('rule7Toggle').checked,
-                rule7Days: parseInt(document.getElementById('rule7Days').value)
+                rule7Days: parseInt(document.getElementById('rule7Days').value),
+                rule8Enabled: document.getElementById('rule8Toggle').checked,
+                rule8Days: parseInt(document.getElementById('rule8Days').value),
+                rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value),
+                rule8GainThreshold: parseFloat(document.getElementById('rule8GainThreshold').value),
+                rule8VolumeThreshold: parseFloat(document.getElementById('rule8VolumeThreshold').value)
             };
 
             btn.disabled = true;

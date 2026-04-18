@@ -16,7 +16,8 @@ const RULE_FUNCTIONS = {
     rule4: 'stock-alert-rule4',
     rule5: 'stock-alert-rule5',
     rule6: 'stock-alert-rule6',
-    rule7: 'stock-alert-rule7'
+    rule7: 'stock-alert-rule7',
+    rule8: 'stock-alert-rule8'
 };
 
 const ORCHESTRATOR_FUNCTION = 'stock-alert-orchestrator';
@@ -126,6 +127,12 @@ async function getConfig() {
         } else if (ruleNum === '7') {
             mergedConfig.rule7Enabled = env.RULE7_ENABLED === 'true';
             mergedConfig.rule7Days = parseInt(env.RULE7_DAYS || '3', 10);
+        } else if (ruleNum === '8') {
+            mergedConfig.rule8Enabled = env.RULE8_ENABLED === 'true';
+            mergedConfig.rule8Days = parseInt(env.RULE8_DAYS || '5', 10);
+            mergedConfig.rule8DropThreshold = parseFloat(env.RULE8_DROP_THRESHOLD || '10');
+            mergedConfig.rule8GainThreshold = parseFloat(env.RULE8_GAIN_THRESHOLD || '3');
+            mergedConfig.rule8VolumeThreshold = parseFloat(env.RULE8_VOLUME_THRESHOLD || '1.5');
         }
     });
 
@@ -226,6 +233,12 @@ async function updateConfig(config) {
             } else if (ruleNum === '7') {
                 newEnv.RULE7_ENABLED = String(config.rule7Enabled === true);
                 newEnv.RULE7_DAYS = String(config.rule7Days || 3);
+            } else if (ruleNum === '8') {
+                newEnv.RULE8_ENABLED = String(config.rule8Enabled === true);
+                newEnv.RULE8_DAYS = String(config.rule8Days || 5);
+                newEnv.RULE8_DROP_THRESHOLD = String(config.rule8DropThreshold || 10);
+                newEnv.RULE8_GAIN_THRESHOLD = String(config.rule8GainThreshold || 3);
+                newEnv.RULE8_VOLUME_THRESHOLD = String(config.rule8VolumeThreshold || 1.5);
             }
 
             const updateCommand = new UpdateFunctionConfigurationCommand({
