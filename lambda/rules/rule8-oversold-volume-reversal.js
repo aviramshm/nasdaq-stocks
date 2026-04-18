@@ -58,6 +58,12 @@ exports.handler = async (event) => {
                 const nDaysAgoClose = closes[closes.length - 1 - days];
                 if (!yesterdayClose || !nDaysAgoClose) return false;
 
+                // Every one of the last N days must have closed lower than the day before
+                const recentCloses = closes.slice(closes.length - 1 - days, closes.length - 1);
+                for (let i = 1; i < recentCloses.length; i++) {
+                    if (recentCloses[i] >= recentCloses[i - 1]) return false;
+                }
+
                 const priorDrop = ((yesterdayClose - nDaysAgoClose) / nDaysAgoClose) * 100;
                 stock.priorDrop = priorDrop;
 
