@@ -39,11 +39,11 @@ exports.handler = async (event) => {
         const matchingStocks = stocks
             .filter(stock => {
                 const closes = (stock.closes || []).filter(c => c !== null);
-                // Need: closes[-2]=yesterday, closes[-2-days]=N days ago
+                // closes[-1]=today(partial), closes[-2]=yesterday, closes[-1-N]=N days ago
                 if (closes.length < days + 2) return false;
 
                 const yesterdayClose = closes[closes.length - 2];
-                const nDaysAgoClose = closes[closes.length - 2 - days];
+                const nDaysAgoClose = closes[closes.length - 1 - days];
                 if (!yesterdayClose || !nDaysAgoClose) return false;
 
                 const priorDrop = ((yesterdayClose - nDaysAgoClose) / nDaysAgoClose) * 100;
