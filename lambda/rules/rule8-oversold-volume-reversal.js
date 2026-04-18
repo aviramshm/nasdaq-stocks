@@ -41,6 +41,13 @@ exports.handler = async (event) => {
         const fetchRange = `${days + 5}d`;
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR, 15, 500, fetchRange, '1d');
 
+        const marketState = stocks[0]?.marketState;
+        console.log(`Market state: ${marketState}`);
+        if (marketState !== 'REGULAR' && !forceRun) {
+            console.log(`Market is not open (state: ${marketState}) — skipping Rule 8.`);
+            return { statusCode: 200, body: JSON.stringify({ message: `Market not open (${marketState})` }) };
+        }
+
         const matchingStocks = stocks
             .filter(stock => {
                 const closes = (stock.closes || []).filter(c => c !== null);
