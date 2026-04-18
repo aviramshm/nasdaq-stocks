@@ -1,11 +1,13 @@
 /**
- * Rule 8: Oversold + Volume Reversal (3 PM EST Action Signal)
- * Runs at 3 PM EST on live intraday data — intended for placing end-of-day buy orders.
+ * Rule 8: Oversold + Volume Reversal
+ * Runs at 2 PM EST (watchlist/heads-up) and 3 PM EST (buy signal) on live intraday data.
  *
  * Triggers when:
  *   - Stock dropped >X% cumulatively over the last N trading days (yesterday close vs N days ago close)
  *   - Up >Y% today vs yesterday's close (live intraday)
  *   - Today's volume already >Z times the daily average
+ *
+ * event.runType: 'watchlist' (2 PM) or 'buysignal' (3 PM, default)
  */
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
 const { sendSlackAlert, formatSingleRuleBlocks } = require('stock-utils/slack-notifier');
@@ -25,6 +27,9 @@ exports.handler = async (event) => {
     console.log(`Enabled: ${enabled} | Days: ${days} | Drop: ${dropThreshold}% | Gain: ${gainThreshold}% | Volume: ${volumeThreshold}x`);
 
     const forceRun = event.forceRun === true;
+    const runType = event.runType || 'buysignal'; // 'watchlist' (2 PM) or 'buysignal' (3 PM)
+    console.log(`Run type: ${runType}`);
+
     if (!enabled && !forceRun) {
         console.log('Rule 8 is disabled. Exiting.');
         return { statusCode: 200, body: JSON.stringify({ message: 'Rule 8 disabled' }) };
@@ -58,15 +63,22 @@ exports.handler = async (event) => {
         console.log(`Rule 8: Found ${matchingStocks.length} matching stocks`);
 
         if (matchingStocks.length > 0 && slackWebhookUrl) {
+            const isWatchlist = runType === 'watchlist';
+            const ruleName = isWatchlist ? 'Watchlist — Signal Forming' : 'Buy Signal — Place Orders Before Close';
+            const ruleEmoji = isWatchlist ? '👀' : '🎯';
+            const descAction = isWatchlist
+                ? 'Signal forming — monitor for close:'
+                : 'Consider buying before close:';
+
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule8',
-                ruleName: 'Oversold Reversal — BUY SIGNAL',
-                ruleEmoji: '🎯',
+                ruleName,
+                ruleEmoji,
                 stocks: matchingStocks,
                 formatStock: (stock) =>
                     `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | ${days}d drop: *${stock.priorDrop.toFixed(2)}%* | Today: *+${stock.change1d.toFixed(2)}%* | Vol: *${stock.volumeRatio.toFixed(1)}x*`,
                 config: {
-                    description: `*Oversold (>${dropThreshold}% over ${days} days) + up >${gainThreshold}% today + volume >${volumeThreshold}x* — consider buying before close:\n${matchingStocks.length} stock(s):`
+                    description: `*Oversold (>${dropThreshold}% over ${days} days) + up >${gainThreshold}% today + volume >${volumeThreshold}x* — ${descAction}\n${matchingStocks.length} stock(s):`
                 }
             });
 

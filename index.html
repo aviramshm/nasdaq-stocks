@@ -302,152 +302,9 @@
 
         <div class="card">
             <div class="rules">
-                <!-- Rule 1: Daily Drop -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">1-Day Drop</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule1Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="1">Test Rule 1</button>
-                </div>
-
-                <!-- Rule 2: 2-Day Drop -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">2-Day Drop</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule2Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">over the last 2 days</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="2">Test Rule 2</button>
-                </div>
 
                 <div class="section-divider">
-                    <span>Upside Potential Indicators</span>
-                </div>
-
-                <!-- Rule 3: Recovery Signal -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Recovery Signal</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule3Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule3Threshold1" class="config-input" value="10" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">in the 5 days prior to yesterday, but UP more than</span>
-                        <input type="number" id="rule3Threshold2" class="config-input" value="3" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="3">Test Rule 3</button>
-                </div>
-
-                <!-- Rule 4: Near 52-Week Low -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Near 52-Week Low</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule4Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Current price within</span>
-                        <input type="number" id="rule4Threshold" class="config-input" value="5" min="1" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">above its 52-week low</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="4">Test Rule 4</button>
-                </div>
-
-                <!-- Rule 5: Bounce Back -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Bounce Back</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule5Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule5Threshold1" class="config-input" value="5" min="1" max="30" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">2 days ago, but UP more than</span>
-                        <input type="number" id="rule5Threshold2" class="config-input" value="2" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="5">Test Rule 5</button>
-                </div>
-
-                <!-- Rule 6: High Volume Surge -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">High Volume Surge</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule6Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Up more than</span>
-                        <input type="number" id="rule6Threshold1" class="config-input" value="3" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">vs yesterday's close, with today's volume</span>
-                        <input type="number" id="rule6Threshold2" class="config-input" value="2" min="1" max="10" step="0.5">
-                        <span class="config-unit">x</span>
-                        <span class="config-label">above average</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
-                </div>
-
-                <!-- Rule 7: Consecutive Drop + All-Time Low -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">Consecutive Drop + All-Time Low</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule7Toggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Closed lower every day for the last</span>
-                        <input type="number" id="rule7Days" class="config-input" value="3" min="2" max="10" step="1">
-                        <span class="config-unit">days</span>
-                        <span class="config-label">and currently at its all-time low</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="7">Test Rule 7</button>
-                </div>
-
-                <div class="schedule-note">
-                    Rules 1–7 run daily at <strong>9:00 AM EST</strong> on weekdays (pre-market, based on yesterday's closes).<br>
-                    Alerts sent to <strong>#stock-alerts</strong> on Slack.
-                </div>
-
-                <div class="section-divider">
-                    <span>3 PM EST Action Signal</span>
+                    <span>Primary Signal</span>
                 </div>
 
                 <!-- Rule 8: Oversold + Volume Reversal -->
@@ -478,8 +335,155 @@
                 </div>
 
                 <div class="schedule-note" style="border-left-color: #ffd700;">
-                    Rule 8 runs daily at <strong>3:00 PM EST</strong> on weekdays (live intraday data).<br>
-                    Place buy orders <strong>before market close</strong> based on these signals.
+                    Runs at <strong>2:00 PM EST</strong> (👀 Watchlist — heads-up, signal forming) and <strong>3:00 PM EST</strong> (🎯 Buy Signal — place orders before close) on weekdays using live intraday data.
+                </div>
+
+                <div class="section-divider">
+                    <span>Additional Rules (9 AM EST, pre-market)</span>
+                </div>
+
+                <!-- Rule 1: Daily Drop -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">1-Day Drop</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule1Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">yesterday</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="1">Test Rule 1</button>
+                </div>
+
+                <!-- Rule 2: 2-Day Drop -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">2-Day Drop</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule2Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">over the last 2 days</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="2">Test Rule 2</button>
+                </div>
+
+                <div class="section-divider">
+                    <span>Upside Potential Indicators</span>
+                </div>
+
+                <!-- Rule 3: Recovery Signal -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Recovery Signal</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule3Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule3Threshold1" class="config-input" value="10" min="1" max="50" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">in the 5 days prior to yesterday, but UP more than</span>
+                        <input type="number" id="rule3Threshold2" class="config-input" value="3" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">yesterday</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="3">Test Rule 3</button>
+                </div>
+
+                <!-- Rule 4: Near 52-Week Low -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Near 52-Week Low</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule4Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Current price within</span>
+                        <input type="number" id="rule4Threshold" class="config-input" value="5" min="1" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">above its 52-week low</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="4">Test Rule 4</button>
+                </div>
+
+                <!-- Rule 5: Bounce Back -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">Bounce Back</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule5Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Dropped more than</span>
+                        <input type="number" id="rule5Threshold1" class="config-input" value="5" min="1" max="30" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">2 days ago, but UP more than</span>
+                        <input type="number" id="rule5Threshold2" class="config-input" value="2" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">yesterday</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="5">Test Rule 5</button>
+                </div>
+
+                <!-- Rule 6: High Volume Surge -->
+                <div class="rule upside">
+                    <div class="rule-header">
+                        <span class="rule-title">High Volume Surge</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule6Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Up more than</span>
+                        <input type="number" id="rule6Threshold1" class="config-input" value="3" min="0.5" max="20" step="0.5">
+                        <span class="config-unit">%</span>
+                        <span class="config-label">vs yesterday's close, with today's volume</span>
+                        <input type="number" id="rule6Threshold2" class="config-input" value="2" min="1" max="10" step="0.5">
+                        <span class="config-unit">x</span>
+                        <span class="config-label">above average</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
+                </div>
+
+                <!-- Rule 7: Consecutive Drop + All-Time Low -->
+                <div class="rule">
+                    <div class="rule-header">
+                        <span class="rule-title">Consecutive Drop + All-Time Low</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="rule7Toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Closed lower every day for the last</span>
+                        <input type="number" id="rule7Days" class="config-input" value="3" min="2" max="10" step="1">
+                        <span class="config-unit">days</span>
+                        <span class="config-label">and currently at its all-time low</span>
+                    </div>
+                    <button class="test-rule-btn" data-rule="7">Test Rule 7</button>
+                </div>
+
+                <div class="schedule-note">
+                    Rules 1–7 run daily at <strong>9:00 AM EST</strong> on weekdays (pre-market, based on yesterday's closes).<br>
+                    Alerts sent to <strong>#stock-alerts</strong> on Slack.
                 </div>
 
                 <div class="buttons">
