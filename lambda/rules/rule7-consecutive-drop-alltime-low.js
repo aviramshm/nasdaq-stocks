@@ -78,7 +78,7 @@ exports.handler = async (event) => {
                 ruleEmoji: '📉',
                 stocks: matchingStocks,
                 formatStock: (stock) =>
-                    `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | All-Time Low: $${stock.allTimeLow.toFixed(2)} | ${days}-day drop: ${stock.change1d.toFixed(2)}% today`,
+                    `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | All-Time Low: $${stock.allTimeLow.toFixed(2)} | ${days}-day drop: ${stock.change1d.toFixed(2)}% today`,
                 config: {
                     description: `*Dropped every day for ${days} days and at all-time low* — ${matchingStocks.length} stock(s):`
                 }

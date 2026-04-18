@@ -54,7 +54,7 @@ exports.handler = async (event) => {
                 ruleName: 'Near 52-Week Low',
                 ruleEmoji: '📍',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.yesterdayClose.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLowYesterday.toFixed(2)}%* from low)`,
+                formatStock: (stock) => `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.yesterdayClose.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLowYesterday.toFixed(2)}%* from low)`,
                 config: {
                     description: `*Stocks within ${threshold}% of 52-week low (yesterday's close)* - ${matchingStocks.length} stock(s):`
                 }

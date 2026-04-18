@@ -55,7 +55,7 @@ exports.handler = async (event) => {
                 ruleName: '2-Day Drop Alert',
                 ruleEmoji: '📉',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.change2dCompleted.toFixed(2)}%* (2d)`,
+                formatStock: (stock) => `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} → *${stock.change2dCompleted.toFixed(2)}%* (2d)`,
                 config: {
                     description: `*Stocks that dropped more than ${threshold}% over the last 2 days* - ${matchingStocks.length} stock(s):`
                 }

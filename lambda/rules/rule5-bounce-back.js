@@ -56,7 +56,7 @@ exports.handler = async (event) => {
                 ruleName: 'Bounce Back',
                 ruleEmoji: '↩️',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | 2 days ago: ${stock.dayBeforeYesterdayChange.toFixed(2)}% | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%*`,
+                formatStock: (stock) => `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | 2 days ago: ${stock.dayBeforeYesterdayChange.toFixed(2)}% | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%*`,
                 config: {
                     description: `*Dropped >${threshold1}% 2 days ago, UP >${threshold2}% yesterday* - ${matchingStocks.length} stock(s):`
                 }

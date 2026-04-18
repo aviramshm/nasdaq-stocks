@@ -53,7 +53,7 @@ exports.handler = async (event) => {
                 ruleName: 'High Volume Surge',
                 ruleEmoji: '🔥',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`,
+                formatStock: (stock) => `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`,
                 config: {
                     description: `*Stocks up >${threshold1}% yesterday with volume >${threshold2}x average* - ${matchingStocks.length} stock(s):`
                 }

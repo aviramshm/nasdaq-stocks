@@ -58,7 +58,7 @@ exports.handler = async (event) => {
                 ruleName: 'Recovery Signal',
                 ruleEmoji: '🔄',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | 5d prior: ${stock.change5dPriorToYesterday.toFixed(2)}% | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%*`,
+                formatStock: (stock) => `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | 5d prior: ${stock.change5dPriorToYesterday.toFixed(2)}% | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%*`,
                 config: {
                     description: `*Dropped >${threshold1}% in 5 days prior to yesterday, UP >${threshold2}% yesterday* - ${matchingStocks.length} stock(s):`
                 }
