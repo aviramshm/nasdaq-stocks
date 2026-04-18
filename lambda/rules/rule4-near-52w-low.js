@@ -33,27 +33,30 @@ exports.handler = async (event) => {
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR);
 
-        // Apply rule-specific filtering
+        // Apply rule-specific filtering — use yesterday's close vs 52-week low
         const matchingStocks = stocks
-            .filter(stock =>
-                stock.distanceFrom52wLow !== null &&
-                stock.distanceFrom52wLow >= 0 &&
-                stock.distanceFrom52wLow <= threshold
-            )
-            .sort((a, b) => a.distanceFrom52wLow - b.distanceFrom52wLow);
+            .filter(stock => {
+                const closes = (stock.closes || []).filter(c => c !== null);
+                if (closes.length < 2 || !stock.fiftyTwoWeekLow) return false;
+                const yesterdayClose = closes[closes.length - 2];
+                const distance = ((yesterdayClose - stock.fiftyTwoWeekLow) / stock.fiftyTwoWeekLow) * 100;
+                stock.distanceFrom52wLowYesterday = distance;
+                stock.yesterdayClose = yesterdayClose;
+                return distance >= 0 && distance <= threshold;
+            })
+            .sort((a, b) => a.distanceFrom52wLowYesterday - b.distanceFrom52wLowYesterday);
 
         console.log(`Rule 4: Found ${matchingStocks.length} matching stocks`);
 
-        // Send Slack alert if matches found
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule4',
                 ruleName: 'Near 52-Week Low',
                 ruleEmoji: '📍',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLow.toFixed(2)}%* from low)`,
+                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.yesterdayClose.toFixed(2)} | 52w Low: $${stock.fiftyTwoWeekLow.toFixed(2)} (*+${stock.distanceFrom52wLowYesterday.toFixed(2)}%* from low)`,
                 config: {
-                    description: `*Stocks within ${threshold}% of 52-week low* - ${matchingStocks.length} stock(s):`
+                    description: `*Stocks within ${threshold}% of 52-week low (yesterday's close)* - ${matchingStocks.length} stock(s):`
                 }
             });
 
@@ -70,7 +73,7 @@ exports.handler = async (event) => {
                 matches: matchingStocks.length,
                 stocks: matchingStocks.map(s => ({
                     symbol: s.symbol,
-                    distance: `${s.distanceFrom52wLow.toFixed(2)}%`
+                    distance: `${s.distanceFrom52wLowYesterday.toFixed(2)}%`
                 }))
             })
         };

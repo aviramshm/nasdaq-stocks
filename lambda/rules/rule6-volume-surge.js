@@ -35,27 +35,27 @@ exports.handler = async (event) => {
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR);
 
-        // Apply rule-specific filtering
+        // Apply rule-specific filtering — use yesterdayChange (completed trading day)
         const matchingStocks = stocks
             .filter(stock =>
                 stock.volumeRatio !== null &&
-                stock.change1d >= threshold1 &&
+                stock.yesterdayChange !== null &&
+                stock.yesterdayChange >= threshold1 &&
                 stock.volumeRatio >= threshold2
             )
             .sort((a, b) => b.volumeRatio - a.volumeRatio);
 
         console.log(`Rule 6: Found ${matchingStocks.length} matching stocks`);
 
-        // Send Slack alert if matches found
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const blocks = formatSingleRuleBlocks({
                 ruleId: 'rule6',
                 ruleName: 'High Volume Surge',
                 ruleEmoji: '🔥',
                 stocks: matchingStocks,
-                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | Today: *+${stock.change1d.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`,
+                formatStock: (stock) => `• *${stock.symbol}* (${stock.name}): $${stock.price.toFixed(2)} | Yesterday: *+${stock.yesterdayChange.toFixed(2)}%* | Volume: *${stock.volumeRatio.toFixed(1)}x* avg`,
                 config: {
-                    description: `*Stocks up >${threshold1}% with volume >${threshold2}x average* - ${matchingStocks.length} stock(s):`
+                    description: `*Stocks up >${threshold1}% yesterday with volume >${threshold2}x average* - ${matchingStocks.length} stock(s):`
                 }
             });
 
@@ -72,7 +72,7 @@ exports.handler = async (event) => {
                 matches: matchingStocks.length,
                 stocks: matchingStocks.map(s => ({
                     symbol: s.symbol,
-                    change: `+${s.change1d.toFixed(2)}%`,
+                    change: `+${s.yesterdayChange.toFixed(2)}%`,
                     volume: `${s.volumeRatio.toFixed(1)}x`
                 }))
             })
