@@ -129,7 +129,8 @@ async function getConfig() {
             mergedConfig.rule7Days = parseInt(env.RULE7_DAYS || '3', 10);
         } else if (ruleNum === '8') {
             mergedConfig.rule8Enabled = env.RULE8_ENABLED === 'true';
-            mergedConfig.rule8Days = parseInt(env.RULE8_DAYS || '5', 10);
+            mergedConfig.rule8MinDays = parseInt(env.RULE8_MIN_DAYS || '3', 10);
+            mergedConfig.rule8MaxDays = parseInt(env.RULE8_MAX_DAYS || '7', 10);
             mergedConfig.rule8DropThreshold = parseFloat(env.RULE8_DROP_THRESHOLD || '10');
             mergedConfig.rule8GainThreshold = parseFloat(env.RULE8_GAIN_THRESHOLD || '3');
             mergedConfig.rule8VolumeThreshold = parseFloat(env.RULE8_VOLUME_THRESHOLD || '1.5');
@@ -235,7 +236,8 @@ async function updateConfig(config) {
                 newEnv.RULE7_DAYS = String(config.rule7Days || 3);
             } else if (ruleNum === '8') {
                 newEnv.RULE8_ENABLED = String(config.rule8Enabled === true);
-                newEnv.RULE8_DAYS = String(config.rule8Days || 5);
+                newEnv.RULE8_MIN_DAYS = String(config.rule8MinDays || 3);
+                newEnv.RULE8_MAX_DAYS = String(config.rule8MaxDays || 7);
                 newEnv.RULE8_DROP_THRESHOLD = String(config.rule8DropThreshold || 10);
                 newEnv.RULE8_GAIN_THRESHOLD = String(config.rule8GainThreshold || 3);
                 newEnv.RULE8_VOLUME_THRESHOLD = String(config.rule8VolumeThreshold || 1.5);

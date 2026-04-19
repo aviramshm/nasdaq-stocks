@@ -317,13 +317,19 @@
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
+                        <span class="config-label">Closed lower every day for</span>
+                        <input type="number" id="rule8MinDays" class="config-input" value="3" min="2" max="10" step="1">
+                        <span class="config-label">to</span>
+                        <input type="number" id="rule8MaxDays" class="config-input" value="7" min="2" max="10" step="1">
+                        <span class="config-unit">days</span>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Cumulative drop more than</span>
                         <input type="number" id="rule8DropThreshold" class="config-input" value="10" min="1" max="50" step="0.5">
                         <span class="config-unit">%</span>
-                        <span class="config-label">over the last</span>
-                        <input type="number" id="rule8Days" class="config-input" value="5" min="2" max="20" step="1">
-                        <span class="config-unit">days</span>
-                        <span class="config-label">, up more than</span>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Up more than</span>
                         <input type="number" id="rule8GainThreshold" class="config-input" value="3" min="0.5" max="20" step="0.5">
                         <span class="config-unit">%</span>
                         <span class="config-label">today, with volume</span>
@@ -336,154 +342,6 @@
 
                 <div class="schedule-note" style="border-left-color: #ffd700;">
                     Runs at <strong>10:00 AM</strong> and <strong>11:00 AM EST</strong> (👀 Watchlist — signal forming) and <strong>2:00 PM EST</strong> (🎯 Buy Signal — place orders before close) on weekdays using live intraday data.
-                </div>
-
-                <div class="section-divider">
-                    <span>Additional Rules (9 AM EST, pre-market)</span>
-                </div>
-
-                <!-- Rule 1: Daily Drop -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">1-Day Drop</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule1Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule1Threshold" class="config-input" value="15" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="1">Test Rule 1</button>
-                </div>
-
-                <!-- Rule 2: 2-Day Drop -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">2-Day Drop</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule2Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule2Threshold" class="config-input" value="20" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">over the last 2 days</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="2">Test Rule 2</button>
-                </div>
-
-                <div class="section-divider">
-                    <span>Upside Potential Indicators</span>
-                </div>
-
-                <!-- Rule 3: Recovery Signal -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Recovery Signal</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule3Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule3Threshold1" class="config-input" value="10" min="1" max="50" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">in the 5 days prior to yesterday, but UP more than</span>
-                        <input type="number" id="rule3Threshold2" class="config-input" value="3" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="3">Test Rule 3</button>
-                </div>
-
-                <!-- Rule 4: Near 52-Week Low -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Near 52-Week Low</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule4Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Current price within</span>
-                        <input type="number" id="rule4Threshold" class="config-input" value="5" min="1" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">above its 52-week low</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="4">Test Rule 4</button>
-                </div>
-
-                <!-- Rule 5: Bounce Back -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">Bounce Back</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule5Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Dropped more than</span>
-                        <input type="number" id="rule5Threshold1" class="config-input" value="5" min="1" max="30" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">2 days ago, but UP more than</span>
-                        <input type="number" id="rule5Threshold2" class="config-input" value="2" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">yesterday</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="5">Test Rule 5</button>
-                </div>
-
-                <!-- Rule 6: High Volume Surge -->
-                <div class="rule upside">
-                    <div class="rule-header">
-                        <span class="rule-title">High Volume Surge</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule6Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Up more than</span>
-                        <input type="number" id="rule6Threshold1" class="config-input" value="3" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">vs yesterday's close, with today's volume</span>
-                        <input type="number" id="rule6Threshold2" class="config-input" value="2" min="1" max="10" step="0.5">
-                        <span class="config-unit">x</span>
-                        <span class="config-label">above average</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="6">Test Rule 6</button>
-                </div>
-
-                <!-- Rule 7: Consecutive Drop + All-Time Low -->
-                <div class="rule">
-                    <div class="rule-header">
-                        <span class="rule-title">Consecutive Drop + All-Time Low</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="rule7Toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Closed lower every day for the last</span>
-                        <input type="number" id="rule7Days" class="config-input" value="3" min="2" max="10" step="1">
-                        <span class="config-unit">days</span>
-                        <span class="config-label">and currently at its all-time low</span>
-                    </div>
-                    <button class="test-rule-btn" data-rule="7">Test Rule 7</button>
-                </div>
-
-                <div class="schedule-note">
-                    Rules 1–7 run daily at <strong>9:00 AM EST</strong> on weekdays (pre-market, based on yesterday's closes).<br>
-                    Alerts sent to <strong>#stock-alerts</strong> on Slack.
                 </div>
 
                 <div class="buttons">
@@ -504,26 +362,9 @@
                 const response = await fetch(API_URL);
                 if (response.ok) {
                     const settings = await response.json();
-                    document.getElementById('rule1Toggle').checked = settings.rule1Enabled;
-                    document.getElementById('rule1Threshold').value = settings.rule1Threshold;
-                    document.getElementById('rule2Toggle').checked = settings.rule2Enabled;
-                    document.getElementById('rule2Threshold').value = settings.rule2Threshold;
-                    // Upside rules
-                    document.getElementById('rule3Toggle').checked = settings.rule3Enabled;
-                    document.getElementById('rule3Threshold1').value = settings.rule3Threshold1 || 10;
-                    document.getElementById('rule3Threshold2').value = settings.rule3Threshold2 || 3;
-                    document.getElementById('rule4Toggle').checked = settings.rule4Enabled;
-                    document.getElementById('rule4Threshold').value = settings.rule4Threshold || 5;
-                    document.getElementById('rule5Toggle').checked = settings.rule5Enabled;
-                    document.getElementById('rule5Threshold1').value = settings.rule5Threshold1 || 5;
-                    document.getElementById('rule5Threshold2').value = settings.rule5Threshold2 || 2;
-                    document.getElementById('rule6Toggle').checked = settings.rule6Enabled;
-                    document.getElementById('rule6Threshold1').value = settings.rule6Threshold1 || 3;
-                    document.getElementById('rule6Threshold2').value = settings.rule6Threshold2 || 2;
-                    document.getElementById('rule7Toggle').checked = settings.rule7Enabled;
-                    document.getElementById('rule7Days').value = settings.rule7Days || 3;
                     document.getElementById('rule8Toggle').checked = settings.rule8Enabled;
-                    document.getElementById('rule8Days').value = settings.rule8Days || 5;
+                    document.getElementById('rule8MinDays').value = settings.rule8MinDays || 3;
+                    document.getElementById('rule8MaxDays').value = settings.rule8MaxDays || 7;
                     document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 10;
                     document.getElementById('rule8GainThreshold').value = settings.rule8GainThreshold || 3;
                     document.getElementById('rule8VolumeThreshold').value = settings.rule8VolumeThreshold || 1.5;
@@ -539,26 +380,9 @@
             const status = document.getElementById('status');
 
             const settings = {
-                rule1Enabled: document.getElementById('rule1Toggle').checked,
-                rule1Threshold: parseFloat(document.getElementById('rule1Threshold').value),
-                rule2Enabled: document.getElementById('rule2Toggle').checked,
-                rule2Threshold: parseFloat(document.getElementById('rule2Threshold').value),
-                // Upside rules
-                rule3Enabled: document.getElementById('rule3Toggle').checked,
-                rule3Threshold1: parseFloat(document.getElementById('rule3Threshold1').value),
-                rule3Threshold2: parseFloat(document.getElementById('rule3Threshold2').value),
-                rule4Enabled: document.getElementById('rule4Toggle').checked,
-                rule4Threshold: parseFloat(document.getElementById('rule4Threshold').value),
-                rule5Enabled: document.getElementById('rule5Toggle').checked,
-                rule5Threshold1: parseFloat(document.getElementById('rule5Threshold1').value),
-                rule5Threshold2: parseFloat(document.getElementById('rule5Threshold2').value),
-                rule6Enabled: document.getElementById('rule6Toggle').checked,
-                rule6Threshold1: parseFloat(document.getElementById('rule6Threshold1').value),
-                rule6Threshold2: parseFloat(document.getElementById('rule6Threshold2').value),
-                rule7Enabled: document.getElementById('rule7Toggle').checked,
-                rule7Days: parseInt(document.getElementById('rule7Days').value),
                 rule8Enabled: document.getElementById('rule8Toggle').checked,
-                rule8Days: parseInt(document.getElementById('rule8Days').value),
+                rule8MinDays: parseInt(document.getElementById('rule8MinDays').value),
+                rule8MaxDays: parseInt(document.getElementById('rule8MaxDays').value),
                 rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value),
                 rule8GainThreshold: parseFloat(document.getElementById('rule8GainThreshold').value),
                 rule8VolumeThreshold: parseFloat(document.getElementById('rule8VolumeThreshold').value)
