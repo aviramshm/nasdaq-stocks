@@ -47,7 +47,8 @@ exports.handler = async (event) => {
 
         const marketState = stocks[0]?.marketState;
         console.log(`Market state: ${marketState}`);
-        if (marketState !== 'REGULAR' && !forceRun) {
+        const closedStates = ['CLOSED', 'PRE', 'POST', 'PREPRE', 'POSTPOST'];
+        if (closedStates.includes(marketState) && !forceRun) {
             console.log(`Market is not open (state: ${marketState}) — skipping Rule 8.`);
             return { statusCode: 200, body: JSON.stringify({ message: `Market not open (${marketState})` }) };
         }
