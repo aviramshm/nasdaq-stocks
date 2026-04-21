@@ -45,12 +45,20 @@ exports.handler = async (event) => {
         const fetchRange = `${maxDays + 5}d`;
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR, 15, 500, fetchRange, '1d');
 
-        const marketState = stocks[0]?.marketState;
-        console.log(`Market state: ${marketState}`);
-        const closedStates = ['CLOSED', 'PRE', 'POST', 'PREPRE', 'POSTPOST'];
-        if (closedStates.includes(marketState) && !forceRun) {
-            console.log(`Market is not open (state: ${marketState}) — skipping Rule 8.`);
-            return { statusCode: 200, body: JSON.stringify({ message: `Market not open (${marketState})` }) };
+        // Check if NYSE is currently open (9:30 AM – 4:00 PM ET, Mon–Fri)
+        const now = new Date();
+        const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const day = etTime.getDay(); // 0=Sun, 6=Sat
+        const hour = etTime.getHours();
+        const minute = etTime.getMinutes();
+        const minuteOfDay = hour * 60 + minute;
+        const marketOpen = 9 * 60 + 30;  // 9:30 AM
+        const marketClose = 16 * 60;      // 4:00 PM
+        const marketIsOpen = day >= 1 && day <= 5 && minuteOfDay >= marketOpen && minuteOfDay < marketClose;
+        console.log(`ET time: ${etTime.toLocaleTimeString()} | Market open: ${marketIsOpen}`);
+        if (!marketIsOpen && !forceRun) {
+            console.log('Market is closed — skipping Rule 8.');
+            return { statusCode: 200, body: JSON.stringify({ message: 'Market closed' }) };
         }
 
         const matchingStocks = [];
