@@ -26,10 +26,9 @@ exports.handler = async (event) => {
     const maxDays = parseInt(process.env.RULE8_MAX_DAYS || '7', 10);
     const dropThreshold = parseFloat(process.env.RULE8_DROP_THRESHOLD || '10');
     const gainThreshold = parseFloat(process.env.RULE8_GAIN_THRESHOLD || '3');
-    const volumeThreshold = parseFloat(process.env.RULE8_VOLUME_THRESHOLD || '1.5');
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
-    console.log(`Enabled: ${enabled} | N: ${minDays}-${maxDays} | Drop: ${dropThreshold}% | Gain: ${gainThreshold}% | Volume: ${volumeThreshold}x`);
+    console.log(`Enabled: ${enabled} | N: ${minDays}-${maxDays} | Drop: ${dropThreshold}% | Gain: ${gainThreshold}%`);
 
     const forceRun = event.forceRun === true;
     const runType = event.runType || 'buysignal';
@@ -97,9 +96,7 @@ exports.handler = async (event) => {
 
             if (bestN === null) continue;
 
-            // Today: up > gainThreshold% and volume > volumeThreshold x avg
             if (stock.change1d === null || stock.change1d < gainThreshold) continue;
-            if (stock.volumeRatio === null || stock.volumeRatio < volumeThreshold) continue;
 
             matchingStocks.push(stock);
         }
@@ -133,14 +130,14 @@ exports.handler = async (event) => {
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `*Oversold reversal* — dropped every day + >${dropThreshold}% cumulative, up >${gainThreshold}% today, volume >${volumeThreshold}x — ${descAction}:`
+                    text: `*Oversold reversal* — dropped every day + >${dropThreshold}% cumulative, up >${gainThreshold}% today — ${descAction}:`
                 }
             });
 
             // One section per N, descending
             for (const n of Object.keys(byN).map(Number).sort((a, b) => b - a)) {
                 const stockLines = byN[n].map(stock =>
-                    `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | ${n}d drop: *${stock.priorDrop.toFixed(2)}%* | Today: *+${stock.change1d.toFixed(2)}%* | Vol: *${stock.volumeRatio.toFixed(1)}x*`
+                    `• *<https://finance.yahoo.com/quote/${stock.symbol}|${stock.symbol}>* (${stock.name}): $${stock.price.toFixed(2)} | ${n}d drop: *${stock.priorDrop.toFixed(2)}%* | Today: *+${stock.change1d.toFixed(2)}%*`
                 ).join('\n');
 
                 blocks.push(
