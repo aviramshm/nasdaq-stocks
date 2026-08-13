@@ -307,38 +307,26 @@
                     <span>Primary Signal</span>
                 </div>
 
-                <!-- Rule 8: Oversold + Volume Reversal -->
-                <div class="rule" style="border-left: 3px solid #ffd700;">
+                <!-- Rule 8: Gap Down Alert -->
+                <div class="rule" style="border-left: 3px solid #ff4757;">
                     <div class="rule-header">
-                        <span class="rule-title">👀 Oversold Reversal — Watchlist</span>
+                        <span class="rule-title">🔴 Gap Down Alert</span>
                         <label class="toggle-switch">
                             <input type="checkbox" id="rule8Toggle" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div class="rule-config">
-                        <span class="config-label">Closed lower every day for</span>
-                        <input type="number" id="rule8MinDays" class="config-input" value="3" min="2" max="10" step="1">
-                        <span class="config-label">to</span>
-                        <input type="number" id="rule8MaxDays" class="config-input" value="7" min="2" max="10" step="1">
-                        <span class="config-unit">days</span>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Cumulative drop more than</span>
-                        <input type="number" id="rule8DropThreshold" class="config-input" value="10" min="1" max="50" step="0.5">
+                        <span class="config-label">Stock dropped more than</span>
+                        <input type="number" id="rule8DropThreshold" class="config-input" value="18" min="5" max="50" step="1">
                         <span class="config-unit">%</span>
-                    </div>
-                    <div class="rule-config">
-                        <span class="config-label">Up more than</span>
-                        <input type="number" id="rule8GainThreshold" class="config-input" value="3" min="0.5" max="20" step="0.5">
-                        <span class="config-unit">%</span>
-                        <span class="config-label">today</span>
+                        <span class="config-label">from yesterday's close</span>
                     </div>
                     <button class="test-rule-btn" data-rule="8">Test Rule 8</button>
                 </div>
 
-                <div class="schedule-note" style="border-left-color: #ffd700;">
-                    Runs at <strong>4:40 PM Israel time</strong> (👀 Watchlist) on weekdays — 10 min after market open, using live intraday data.
+                <div class="schedule-note" style="border-left-color: #ff4757;">
+                    Runs at <strong>4:33 PM Israel time</strong> on weekdays — 3 min after market open, catches gap-down overreactions before recovery.
                 </div>
 
                 <div class="buttons">
@@ -360,10 +348,7 @@
                 if (response.ok) {
                     const settings = await response.json();
                     document.getElementById('rule8Toggle').checked = settings.rule8Enabled;
-                    document.getElementById('rule8MinDays').value = settings.rule8MinDays || 3;
-                    document.getElementById('rule8MaxDays').value = settings.rule8MaxDays || 7;
-                    document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 10;
-                    document.getElementById('rule8GainThreshold').value = settings.rule8GainThreshold || 3;
+                    document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 18;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -377,10 +362,7 @@
 
             const settings = {
                 rule8Enabled: document.getElementById('rule8Toggle').checked,
-                rule8MinDays: parseInt(document.getElementById('rule8MinDays').value),
-                rule8MaxDays: parseInt(document.getElementById('rule8MaxDays').value),
-                rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value),
-                rule8GainThreshold: parseFloat(document.getElementById('rule8GainThreshold').value)
+                rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value)
             };
 
             btn.disabled = true;
