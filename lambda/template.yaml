@@ -201,6 +201,7 @@ Resources:
                 - !GetAtt Rule4Function.Arn
                 - !GetAtt Rule5Function.Arn
                 - !GetAtt Rule6Function.Arn
+                - arn:aws:lambda:us-east-1:002393878716:function:stock-alert-rule8
       Events:
         DailySchedule:
           Type: Schedule
