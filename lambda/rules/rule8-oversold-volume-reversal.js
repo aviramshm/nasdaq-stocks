@@ -29,7 +29,7 @@ exports.handler = async (event) => {
 
     try {
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
-        const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR, 15, 500, '2d', '1d');
+        const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR, 25, 300, '2d', '1d');
 
         const now = new Date();
         const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
