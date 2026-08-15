@@ -43,15 +43,24 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ message: 'Market closed' }) };
         }
 
-        const matchingStocks = stocks
-            .filter(s => s.change1d !== null && s.change1d < -dropThreshold)
-            .sort((a, b) => a.change1d - b.change1d);
+        const matchingStocks = [];
+        for (const s of stocks) {
+            // Use closes array directly — meta.previousClose can be stale after large moves
+            const nonNullCloses = (s.closes || []).filter(c => c !== null);
+            const prevClose = nonNullCloses[nonNullCloses.length - 1];
+            if (!prevClose || !s.price) continue;
+            const gapDown = ((s.price - prevClose) / prevClose) * 100;
+            if (gapDown >= -dropThreshold) continue;
+            s.gapDown = gapDown;
+            matchingStocks.push(s);
+        }
+        matchingStocks.sort((a, b) => a.gapDown - b.gapDown);
 
         console.log(`Rule 8: Found ${matchingStocks.length} matching stocks`);
 
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const stockLines = matchingStocks.map(s =>
-                `• *<https://finance.yahoo.com/quote/${s.symbol}|${s.symbol}>* (${s.name}): $${s.price.toFixed(2)} | Drop: *${s.change1d.toFixed(2)}%*`
+                `• *<https://finance.yahoo.com/quote/${s.symbol}|${s.symbol}>* (${s.name}): $${s.price.toFixed(2)} | Drop: *${s.gapDown.toFixed(2)}%*`
             ).join('\n');
 
             const blocks = [
@@ -92,7 +101,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({
                 rule: 'rule8',
                 matches: matchingStocks.length,
-                stocks: matchingStocks.map(s => ({ symbol: s.symbol, drop: `${s.change1d.toFixed(2)}%` }))
+                stocks: matchingStocks.map(s => ({ symbol: s.symbol, drop: `${s.gapDown.toFixed(2)}%` }))
             })
         };
 

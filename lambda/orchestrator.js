@@ -14,8 +14,8 @@ const RULE_FUNCTIONS = [
     'stock-alert-rule4',
     'stock-alert-rule5',
     'stock-alert-rule6',
-    'stock-alert-rule7',
-    'stock-alert-rule8'
+    'stock-alert-rule7'
+    // rule8 has its own dedicated EventBridge schedule at 4:33 PM IL — not run via orchestrator
 ];
 
 exports.handler = async (event) => {
