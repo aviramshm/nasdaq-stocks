@@ -28,6 +28,14 @@ exports.handler = async (event) => {
     }
 
     try {
+        const etLabel = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        if (slackWebhookUrl) {
+            await sendSlackAlert(slackWebhookUrl, [{
+                type: 'context',
+                elements: [{ type: 'mrkdwn', text: `🔍 Gap Down scan started — ${STOCKS_TO_MONITOR.length} stocks | ${etLabel} ET` }]
+            }]);
+        }
+
         console.log(`Fetching data for ${STOCKS_TO_MONITOR.length} stocks...`);
         const stocks = await fetchBatchStockData(STOCKS_TO_MONITOR, 25, 300, '2d', '1d');
 
@@ -92,8 +100,12 @@ exports.handler = async (event) => {
 
             await sendSlackAlert(slackWebhookUrl, blocks);
             console.log('Slack alert sent successfully!');
-        } else if (matchingStocks.length === 0) {
-            console.log('No matching stocks — no alert sent');
+        } else if (matchingStocks.length === 0 && slackWebhookUrl) {
+            await sendSlackAlert(slackWebhookUrl, [{
+                type: 'context',
+                elements: [{ type: 'mrkdwn', text: `✅ Gap Down scan complete — no stocks down >${dropThreshold}% | ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET` }]
+            }]);
+            console.log('No matching stocks — heartbeat sent');
         }
 
         return {
