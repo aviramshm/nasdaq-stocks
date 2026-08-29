@@ -318,7 +318,7 @@
                     </div>
                     <div class="rule-config">
                         <span class="config-label">Stock dropped more than</span>
-                        <input type="number" id="rule8DropThreshold" class="config-input" value="18" min="5" max="50" step="1">
+                        <input type="number" id="rule8DropThreshold" class="config-input" value="9" min="1" max="50" step="1">
                         <span class="config-unit">%</span>
                         <span class="config-label">from yesterday's close</span>
                     </div>
@@ -348,7 +348,7 @@
                 if (response.ok) {
                     const settings = await response.json();
                     document.getElementById('rule8Toggle').checked = settings.rule8Enabled;
-                    document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 18;
+                    document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 9;
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);

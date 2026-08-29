@@ -15,7 +15,7 @@ exports.handler = async (event) => {
     console.log('Event:', JSON.stringify(event));
 
     const enabled = process.env.RULE8_ENABLED === 'true';
-    const dropThreshold = parseFloat(process.env.RULE8_DROP_THRESHOLD || '18');
+    const dropThreshold = parseFloat(process.env.RULE8_DROP_THRESHOLD || '9');
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
     console.log(`Enabled: ${enabled} | Drop threshold: ${dropThreshold}%`);
