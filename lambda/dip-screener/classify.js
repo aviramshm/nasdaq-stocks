@@ -51,7 +51,7 @@ function parseResult(text) {
 
 async function classifyWithClaude(s) {
     if (!process.env.ANTHROPIC_API_KEY) return null;
-    const client = new Anthropic();
+    const client = new Anthropic({ timeout: 180 * 1000, maxRetries: 2 });
     const messages = [{ role: 'user', content: buildPrompt(s) }];
 
     try {

@@ -5,19 +5,33 @@
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const BASE = 'https://query1.finance.yahoo.com';
 
+const TIMEOUT_MS = 10000; // a hung request must not stall the whole run
+
 let session = null;
 
+/** Call at the start of each run: warm Lambda containers keep module state between runs. */
+function resetSession() {
+    session = null;
+}
+
 async function getJson(url, headers = {}) {
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json', ...headers } });
+    const res = await fetch(url, {
+        headers: { 'User-Agent': UA, Accept: 'application/json', ...headers },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
     if (!res.ok) throw new Error(`Yahoo ${res.status} for ${url.split('?')[0]}`);
     return res.json();
 }
 
 async function getSession() {
     if (session) return session;
-    const r = await fetch('https://fc.yahoo.com', { headers: { 'User-Agent': UA }, redirect: 'manual' });
+    const r = await fetch('https://fc.yahoo.com', {
+        headers: { 'User-Agent': UA }, redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
     const cookie = (r.headers.getSetCookie?.() || []).map(c => c.split(';')[0]).join('; ');
-    const crumbRes = await fetch(`${BASE}/v1/test/getcrumb`, { headers: { 'User-Agent': UA, Cookie: cookie } });
+    const crumbRes = await fetch(`${BASE}/v1/test/getcrumb`, {
+        headers: { 'User-Agent': UA, Cookie: cookie }, signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
     const crumb = await crumbRes.text();
     if (!crumbRes.ok || !crumb || crumb.includes('<')) throw new Error('Could not get Yahoo crumb');
     session = { cookie, crumb };
@@ -38,14 +52,23 @@ async function chart(symbol, range, interval) {
     return { meta: result.meta, bars };
 }
 
-async function quoteSummary(symbol) {
+async function quoteSummary(symbol, retried = false) {
     const { cookie, crumb } = await getSession();
     const modules = 'price,summaryProfile,financialData,calendarEvents';
-    const json = await getJson(
-        `${BASE}/v10/finance/quoteSummary/${yahooSymbol(symbol)}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`,
-        { Cookie: cookie }
-    );
-    return json.quoteSummary?.result?.[0] || {};
+    try {
+        const json = await getJson(
+            `${BASE}/v10/finance/quoteSummary/${yahooSymbol(symbol)}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`,
+            { Cookie: cookie }
+        );
+        return json.quoteSummary?.result?.[0] || {};
+    } catch (error) {
+        // Expired/rejected crumb: get a fresh session once and retry
+        if (!retried && /Yahoo 40[13]/.test(error.message)) {
+            resetSession();
+            return quoteSummary(symbol, true);
+        }
+        throw error;
+    }
 }
 
 /** Headlines from the last `hours` hours that mention the symbol. */
@@ -58,4 +81,4 @@ async function headlines(symbol, hours = 48) {
         .map(n => n.title);
 }
 
-module.exports = { chart, quoteSummary, headlines };
+module.exports = { chart, quoteSummary, headlines, resetSession };

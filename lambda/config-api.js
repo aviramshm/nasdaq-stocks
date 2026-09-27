@@ -5,6 +5,7 @@
  */
 
 const { LambdaClient, UpdateFunctionConfigurationCommand, GetFunctionConfigurationCommand, InvokeCommand } = require('@aws-sdk/client-lambda');
+const crypto = require('crypto');
 
 const lambda = new LambdaClient({});
 
@@ -27,12 +28,23 @@ const ORCHESTRATOR_FUNCTION = 'stock-alert-orchestrator';
 const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, x-app-password',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
 
+/** Constant-time check of the x-app-password header against APP_PASSWORD. */
+function isAuthorized(event) {
+    const expected = process.env.APP_PASSWORD;
+    if (!expected) return true;
+    const given = event.headers?.['x-app-password'] || event.headers?.['X-App-Password'] || '';
+    const a = crypto.createHash('sha256').update(given).digest();
+    const b = crypto.createHash('sha256').update(expected).digest();
+    return crypto.timingSafeEqual(a, b);
+}
+
 exports.handler = async (event) => {
-    console.log('Event:', JSON.stringify(event));
+    // Don't log headers - they carry the app password
+    console.log('Request:', event.requestContext?.http?.method, event.requestContext?.http?.path || event.path);
 
     // Handle CORS preflight
     if (event.requestContext?.http?.method === 'OPTIONS') {
@@ -42,6 +54,11 @@ exports.handler = async (event) => {
     const method = event.requestContext?.http?.method || event.httpMethod;
 
     const path = event.requestContext?.http?.path || event.path || '';
+
+    // Anything that changes settings or starts a scan (which spends Claude credit) needs the password
+    if (method === 'POST' && !isAuthorized(event)) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Wrong or missing password' }) };
+    }
 
     try {
         // Route: POST /config/rule/{ruleId}/run - Run individual rule

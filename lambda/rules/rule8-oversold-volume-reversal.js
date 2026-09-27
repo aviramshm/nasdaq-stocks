@@ -55,6 +55,40 @@ async function scheduleDipScreener(stocks, now) {
     console.log(`Dip Screener scheduled at ${at} ET for ${payload.stocks.length} stock(s)`);
 }
 
+/**
+ * Slack blocks for the alert. A section's text is limited to 3,000 characters and a
+ * message to 50 blocks, so stock lines are split across sections and capped.
+ */
+const MAX_LISTED = 150;
+function buildGapDownBlocks(matchingStocks, dropThreshold, timeLabel, scannedCount) {
+    const lines = matchingStocks.slice(0, MAX_LISTED).map(s =>
+        `• *<https://finance.yahoo.com/quote/${s.symbol}|${s.symbol}>* (${s.name}): $${s.price.toFixed(2)} | Drop: *${s.gapDown.toFixed(2)}%*`
+    );
+    const sections = [];
+    let current = '';
+    for (const line of lines) {
+        if (current && current.length + line.length + 1 > 2800) {
+            sections.push(current);
+            current = '';
+        }
+        current = current ? `${current}\n${line}` : line;
+    }
+    if (current) sections.push(current);
+
+    const more = matchingStocks.length - lines.length;
+    return [
+        { type: 'header', text: { type: 'plain_text', text: '🔴 Gap Down Alert', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${matchingStocks.length} stocks down >${dropThreshold}% at open* — potential overreaction:` } },
+        { type: 'divider' },
+        ...sections.slice(0, 40).map(text => ({ type: 'section', text: { type: 'mrkdwn', text } })),
+        { type: 'divider' },
+        { type: 'context', elements: [{ type: 'mrkdwn', text:
+            `${more > 0 ? `+${more} more not listed | ` : ''}Scanned ${scannedCount} stocks | 🕙 ${timeLabel} ET` }] }
+    ];
+}
+
+exports.buildGapDownBlocks = buildGapDownBlocks; // exported for testing
+
 exports.handler = async (event) => {
     console.log('Rule 8: Gap Down Alert triggered');
     console.log('Event:', JSON.stringify(event));
@@ -131,38 +165,16 @@ exports.handler = async (event) => {
         }
 
         if (matchingStocks.length > 0 && slackWebhookUrl) {
-            const stockLines = matchingStocks.map(s =>
-                `• *<https://finance.yahoo.com/quote/${s.symbol}|${s.symbol}>* (${s.name}): $${s.price.toFixed(2)} | Drop: *${s.gapDown.toFixed(2)}%*`
-            ).join('\n');
-
-            const blocks = [
-                {
-                    type: 'header',
-                    text: { type: 'plain_text', text: '🔴 Gap Down Alert', emoji: true }
-                },
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: `*Stocks down >${dropThreshold}% at open* — potential overreaction:`
-                    }
-                },
-                { type: 'divider' },
-                {
-                    type: 'section',
-                    text: { type: 'mrkdwn', text: stockLines }
-                },
-                { type: 'divider' },
-                {
-                    type: 'context',
-                    elements: [{
-                        type: 'mrkdwn',
-                        text: `🕙 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET`
-                    }]
-                }
-            ];
-
-            await sendSlackAlert(slackWebhookUrl, blocks);
+            const timeLabel = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+            try {
+                await sendSlackAlert(slackWebhookUrl, buildGapDownBlocks(matchingStocks, dropThreshold, timeLabel, stocks.length));
+            } catch (error) {
+                // Never lose the alert: fall back to a minimal plain message
+                console.error('Full Slack alert failed, sending fallback:', error.message);
+                const top = matchingStocks.slice(0, 40).map(s => `${s.symbol} ${s.gapDown.toFixed(1)}%`).join(', ');
+                await sendSlackAlert(slackWebhookUrl, [{ type: 'section', text: { type: 'mrkdwn',
+                    text: `🔴 *Gap Down Alert* — ${matchingStocks.length} stocks down >${dropThreshold}%: ${top}${matchingStocks.length > 40 ? ', …' : ''}` } }]);
+            }
             console.log('Slack alert sent successfully!');
         } else if (matchingStocks.length === 0 && slackWebhookUrl) {
             await sendSlackAlert(slackWebhookUrl, [{

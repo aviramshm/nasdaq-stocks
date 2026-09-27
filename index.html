@@ -382,6 +382,34 @@
 
     <script>
         const API_URL = 'https://hkiacme8v5.execute-api.us-east-1.amazonaws.com/prod/config';
+        const PASSWORD_KEY = 'stockAlertsPassword';
+
+        function getSavedPassword() {
+            try { return localStorage.getItem(PASSWORD_KEY) || ''; } catch { return ''; }
+        }
+        function savePassword(value) {
+            try { value ? localStorage.setItem(PASSWORD_KEY, value) : localStorage.removeItem(PASSWORD_KEY); } catch {}
+        }
+
+        // POST with the app password; asks for it when missing or rejected (remembered in this browser)
+        async function apiPost(url, body) {
+            let password = getSavedPassword() || prompt('Enter the app password:') || '';
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-app-password': password },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+                if (response.status !== 401) {
+                    savePassword(password);
+                    return response;
+                }
+                savePassword('');
+                password = prompt('Wrong password. Enter the app password:') || '';
+                if (!password) return response;
+            }
+            throw new Error('Wrong password');
+        }
 
         // Load settings from API
         async function loadSettings() {
@@ -424,11 +452,7 @@
             status.className = 'status';
 
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings)
-                });
+                const response = await apiPost(API_URL, settings);
 
                 if (response.ok) {
                     status.textContent = 'Configuration saved!';
@@ -455,10 +479,7 @@
             status.className = 'status';
 
             try {
-                const response = await fetch(API_URL.replace('/config', '/run'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await apiPost(API_URL.replace('/config', '/run'));
 
                 if (response.ok) {
                     status.textContent = 'Scan started! Results will be sent to Slack.';
@@ -487,10 +508,7 @@
             status.className = 'status';
 
             try {
-                const response = await fetch(`${API_URL}/rule/${ruleId}/run`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await apiPost(`${API_URL}/rule/${ruleId}/run`);
 
                 if (response.ok) {
                     status.textContent = `Rule ${ruleId} test started! Check Slack for results.`;

@@ -42,14 +42,15 @@ async function postSlack(url, blocks, text = 'Dip Screener') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, blocks }),
+        signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) console.error('Slack error', res.status, await res.text());
 }
 
 const heartbeat = (url, text) => postSlack(url, [{ type: 'context', elements: [{ type: 'mrkdwn', text }] }], text);
 
-/** % move today vs yesterday's close, for an ETF/index. */
-const moveCache = new Map();
+/** % move today vs yesterday's close, for an ETF/index. Cache is reset every run. */
+let moveCache = new Map();
 async function todayMove(symbol, todayET) {
     if (!moveCache.has(symbol)) {
         moveCache.set(symbol, (async () => {
@@ -225,6 +226,9 @@ function stockBlock(r) {
 
 exports.handler = async (event = {}) => {
     const cfg = settings();
+    // Warm containers keep module state between runs; never reuse yesterday's market moves or token
+    moveCache = new Map();
+    yahoo.resetSession();
     if (event.dryRun) cfg.slackWebhookUrl = null; // test without posting to Slack
     const forceRun = event.forceRun === true;
     if (!cfg.enabled && !forceRun) return { statusCode: 200, body: JSON.stringify({ message: 'Screener disabled' }) };
