@@ -156,10 +156,24 @@ function tradePlan({ price, prevClose, dayLow, maxLoss, maxPosition, dailyVol })
         positionUsd: Math.round(shares * price),
         lossIfStoppedUsd: Math.round(shares * riskPerShare),
         limitedBy: byLoss < byPosition ? 'max loss' : 'max position',
+        // Upside to yesterday's close per $1 of downside to the stop
+        rewardRisk: +((prevClose - price) / riskPerShare).toFixed(1),
+    };
+}
+
+const MIN_REWARD_RISK = 1.5;
+
+/** A trade that can't make 1.5x what it risks is downgraded one level (WATCH -> MAYBE -> PASS). */
+function applyRewardRisk(verdict, plan) {
+    if (!plan || plan.rewardRisk >= MIN_REWARD_RISK) return { verdict, note: null };
+    const downgraded = verdict === 'WATCH' ? 'MAYBE' : 'PASS';
+    return {
+        verdict: downgraded,
+        note: `reward/risk only ${plan.rewardRisk} (min ${MIN_REWARD_RISK}) → ${verdict} downgraded to ${downgraded}`,
     };
 }
 
 module.exports = {
     CAUSE_POINTS, etDate, splitDaily, dailyStats, intradayStats, qualityScore,
-    sectorShare, classifyByKeywords, verdictFor, tradePlan,
+    sectorShare, classifyByKeywords, verdictFor, tradePlan, applyRewardRisk, MIN_REWARD_RISK,
 };

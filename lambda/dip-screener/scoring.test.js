@@ -94,3 +94,15 @@ test('stop buffer scales with volatility, minimum 1%', () => {
     assert.strictEqual(wild.shares, 39);          // 300 / (93 - 85.36)
     assert.ok(wild.lossIfStoppedUsd <= 300);
 });
+
+test('reward/risk: computed to yesterday\'s close and downgrades weak trades', () => {
+    // buy 93, stop 87.12 (risk 5.88), yesterday 100 (reward 7) -> 1.2
+    const weak = s.tradePlan({ price: 93, prevClose: 100, dayLow: 88, maxLoss: 300, maxPosition: 4000, dailyVol: 1.5 });
+    assert.strictEqual(weak.rewardRisk, 1.2);
+    assert.strictEqual(s.applyRewardRisk('WATCH', weak).verdict, 'MAYBE');
+    assert.strictEqual(s.applyRewardRisk('MAYBE', weak).verdict, 'PASS');
+    // buy 92, low 91, yesterday 100 -> risk 1.91, reward 8 -> 4.2
+    const strong = s.tradePlan({ price: 92, prevClose: 100, dayLow: 91, maxLoss: 300, maxPosition: 4000, dailyVol: 1.5 });
+    assert.ok(strong.rewardRisk >= 1.5);
+    assert.deepStrictEqual(s.applyRewardRisk('WATCH', strong), { verdict: 'WATCH', note: null });
+});
