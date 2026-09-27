@@ -51,11 +51,24 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ message: 'Market closed' }) };
         }
 
+        // Yesterday's close = last daily bar dated before today (ET).
+        // - meta.previousClose can be stale after large moves.
+        // - During market hours the last bar is today's, and its close is the live price.
+        const etDate = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        const todayET = etDate(now);
+
         const matchingStocks = [];
         for (const s of stocks) {
-            // Use closes array directly — meta.previousClose can be stale after large moves
-            const nonNullCloses = (s.closes || []).filter(c => c !== null);
-            const prevClose = nonNullCloses[nonNullCloses.length - 1];
+            let prevClose = null;
+            const closes = s.closes || [];
+            const timestamps = s.timestamps || [];
+            for (let i = closes.length - 1; i >= 0; i--) {
+                if (closes[i] == null || !timestamps[i]) continue;
+                if (etDate(new Date(timestamps[i] * 1000)) < todayET) {
+                    prevClose = closes[i];
+                    break;
+                }
+            }
             if (!prevClose || !s.price) continue;
             const gapDown = ((s.price - prevClose) / prevClose) * 100;
             if (gapDown >= -dropThreshold) continue;
