@@ -173,9 +173,10 @@ async function analyze(entry, ctx) {
             ? `TRIGGERED (${[aboveVwap && 'above VWAP', aboveOrHigh && 'above 30-min high'].filter(Boolean).join(', ')})`
             : `NOT YET (VWAP ${intraday.vwap.toFixed(2)}, 30-min high ${intraday.orHigh?.toFixed(2) ?? 'n/a'})`;
     }
-    let plan = (verdict === 'WATCH' || verdict === 'MAYBE')
-        ? scoring.tradePlan({ price, prevClose, dayLow, maxLoss: cfg.maxLoss, maxPosition: cfg.maxPosition, dailyVol: stats.dailyVol })
-        : null;
+    // The same plan is computed for every scored stock so the weekly scorecard can compare
+    // what WATCH trades did against what PASS/AVOID trades would have done.
+    const evalPlan = scoring.tradePlan({ price, prevClose, dayLow, maxLoss: cfg.maxLoss, maxPosition: cfg.maxPosition, dailyVol: stats.dailyVol });
+    let plan = (verdict === 'WATCH' || verdict === 'MAYBE') ? evalPlan : null;
     const rr = scoring.applyRewardRisk(verdict, plan);
     if (rr.note) {
         verdict = rr.verdict;
@@ -185,7 +186,7 @@ async function analyze(entry, ctx) {
 
     return {
         ...out, verdict, score, cause, reason, warning, classifiedBy, trigger, plan, notes,
-        triggered: trigger.startsWith('TRIGGERED'), dailyVol: stats.dailyVol,
+        triggered: trigger.startsWith('TRIGGERED'), dailyVol: stats.dailyVol, evalPlan,
         marketCap, sector, sectorEtf, sectorMove, headlines: heads.slice(0, 5),
     };
 }
@@ -359,6 +360,9 @@ exports.handler = async (event = {}, context = {}) => {
     if (!cfg.enabled && !forceRun) return { statusCode: 200, body: JSON.stringify({ message: 'Screener disabled' }) };
 
     if (event.mode === 'recheck') return runRecheck(event, cfg, context.invokedFunctionArn);
+    if (event.mode === 'scorecard') {
+        return require('./scorecard').runScorecard({ mapLimit, postSlack, slackWebhookUrl: cfg.slackWebhookUrl });
+    }
 
     const todayET = event.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const nowLabel = () => new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
