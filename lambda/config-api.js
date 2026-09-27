@@ -17,7 +17,8 @@ const RULE_FUNCTIONS = {
     rule5: 'stock-alert-rule5',
     rule6: 'stock-alert-rule6',
     rule7: 'stock-alert-rule7',
-    rule8: 'stock-alert-rule8'
+    rule8: 'stock-alert-rule8',
+    screener: 'stock-alert-dip-screener'
 };
 
 const ORCHESTRATOR_FUNCTION = 'stock-alert-orchestrator';
@@ -82,7 +83,7 @@ exports.handler = async (event) => {
 };
 
 async function getConfig() {
-    // Query all 6 rule functions for their current configuration
+    // Query all rule functions for their current configuration
     const configPromises = Object.entries(RULE_FUNCTIONS).map(async ([ruleKey, functionName]) => {
         try {
             const command = new GetFunctionConfigurationCommand({
@@ -129,11 +130,13 @@ async function getConfig() {
             mergedConfig.rule7Days = parseInt(env.RULE7_DAYS || '3', 10);
         } else if (ruleNum === '8') {
             mergedConfig.rule8Enabled = env.RULE8_ENABLED === 'true';
-            mergedConfig.rule8MinDays = parseInt(env.RULE8_MIN_DAYS || '3', 10);
-            mergedConfig.rule8MaxDays = parseInt(env.RULE8_MAX_DAYS || '7', 10);
-            mergedConfig.rule8DropThreshold = parseFloat(env.RULE8_DROP_THRESHOLD || '10');
-            mergedConfig.rule8GainThreshold = parseFloat(env.RULE8_GAIN_THRESHOLD || '3');
-            mergedConfig.rule8VolumeThreshold = parseFloat(env.RULE8_VOLUME_THRESHOLD || '1.5');
+            mergedConfig.rule8DropThreshold = parseFloat(env.RULE8_DROP_THRESHOLD || '9');
+        } else if (ruleNum === 'screener') {
+            mergedConfig.screenerEnabled = env.SCREENER_ENABLED === 'true';
+            mergedConfig.screenerMinMarketCap = parseFloat(env.SCREENER_MIN_MCAP || '500000000');
+            mergedConfig.screenerMinDollarVolume = parseFloat(env.SCREENER_MIN_DOLLAR_VOL || '3000000');
+            mergedConfig.screenerMaxPosition = parseFloat(env.SCREENER_MAX_POSITION || '4000');
+            mergedConfig.screenerMaxLoss = parseFloat(env.SCREENER_MAX_LOSS || '300');
         }
     });
 
@@ -196,8 +199,13 @@ async function runSingleRule(ruleId) {
 }
 
 async function updateConfig(config) {
-    // Update environment variables for all 6 rule functions in parallel
-    const updatePromises = Object.entries(RULE_FUNCTIONS).map(async ([ruleKey, functionName]) => {
+    // Update only the functions whose settings were sent (e.g. rule8DropThreshold -> rule8),
+    // so saving one rule never silently resets the others to defaults.
+    const sentKeys = Object.keys(config);
+    const targets = Object.entries(RULE_FUNCTIONS).filter(([ruleKey]) =>
+        sentKeys.some(k => k.startsWith(ruleKey) && /^[A-Z]/.test(k.slice(ruleKey.length))));
+
+    const updatePromises = targets.map(async ([ruleKey, functionName]) => {
         try {
             // Get current config first
             const getCommand = new GetFunctionConfigurationCommand({
@@ -236,11 +244,16 @@ async function updateConfig(config) {
                 newEnv.RULE7_DAYS = String(config.rule7Days || 3);
             } else if (ruleNum === '8') {
                 newEnv.RULE8_ENABLED = String(config.rule8Enabled === true);
-                newEnv.RULE8_MIN_DAYS = String(config.rule8MinDays || 3);
-                newEnv.RULE8_MAX_DAYS = String(config.rule8MaxDays || 7);
-                newEnv.RULE8_DROP_THRESHOLD = String(config.rule8DropThreshold || 10);
-                newEnv.RULE8_GAIN_THRESHOLD = String(config.rule8GainThreshold || 3);
-                newEnv.RULE8_VOLUME_THRESHOLD = String(config.rule8VolumeThreshold || 1.5);
+                newEnv.RULE8_DROP_THRESHOLD = String(config.rule8DropThreshold || 9);
+                for (const stale of ['RULE8_MIN_DAYS', 'RULE8_MAX_DAYS', 'RULE8_GAIN_THRESHOLD', 'RULE8_VOLUME_THRESHOLD']) {
+                    delete newEnv[stale];
+                }
+            } else if (ruleNum === 'screener') {
+                newEnv.SCREENER_ENABLED = String(config.screenerEnabled === true);
+                newEnv.SCREENER_MIN_MCAP = String(config.screenerMinMarketCap || 500000000);
+                newEnv.SCREENER_MIN_DOLLAR_VOL = String(config.screenerMinDollarVolume || 3000000);
+                newEnv.SCREENER_MAX_POSITION = String(config.screenerMaxPosition || 4000);
+                newEnv.SCREENER_MAX_LOSS = String(config.screenerMaxLoss || 300);
             }
 
             const updateCommand = new UpdateFunctionConfigurationCommand({

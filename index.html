@@ -326,7 +326,49 @@
                 </div>
 
                 <div class="schedule-note" style="border-left-color: #ff4757;">
-                    Runs at <strong>4:33 PM Israel time</strong> on weekdays — 3 min after market open, catches gap-down overreactions before recovery.
+                    Runs at <strong>9:33 AM New York time</strong> on weekdays (usually 4:33 PM Israel time) — 3 min after market open, catches gap-down overreactions before recovery.
+                </div>
+
+                <div class="section-divider">
+                    <span>Dip Screener</span>
+                </div>
+
+                <!-- Stage 2: Dip Screener -->
+                <div class="rule" style="border-left: 3px solid #00ff88;">
+                    <div class="rule-header">
+                        <span class="rule-title">🧪 Dip Screener</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="screenerToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="rule-config">
+                        <span class="config-label">Skip companies under</span>
+                        <span class="config-unit">$</span>
+                        <input type="number" id="screenerMinMarketCap" class="config-input" value="500" min="0" step="100">
+                        <span class="config-label">M market cap</span>
+                    </div>
+                    <div class="rule-config" style="margin-top: 10px;">
+                        <span class="config-label">Skip stocks trading under</span>
+                        <span class="config-unit">$</span>
+                        <input type="number" id="screenerMinDollarVolume" class="config-input" value="3" min="0" step="1">
+                        <span class="config-label">M a day</span>
+                    </div>
+                    <div class="rule-config" style="margin-top: 10px;">
+                        <span class="config-label">Max position</span>
+                        <span class="config-unit">$</span>
+                        <input type="number" id="screenerMaxPosition" class="config-input" style="width: 90px;" value="4000" min="100" step="100">
+                    </div>
+                    <div class="rule-config" style="margin-top: 10px;">
+                        <span class="config-label">Max loss per trade</span>
+                        <span class="config-unit">$</span>
+                        <input type="number" id="screenerMaxLoss" class="config-input" style="width: 90px;" value="300" min="10" step="10">
+                    </div>
+                </div>
+
+                <div class="schedule-note" style="border-left-color: #00ff88;">
+                    Runs at <strong>10:05 AM New York time</strong> on days the Gap Down Alert flags stocks. Scores each one — why it dropped, company quality, trend — and posts
+                    <strong>WATCH / MAYBE / PASS / AVOID</strong> with a buy signal (price above VWAP or the 9:30–10:00 high) and a trade plan sized to your max position and max loss.
                 </div>
 
                 <div class="buttons">
@@ -349,6 +391,13 @@
                     const settings = await response.json();
                     document.getElementById('rule8Toggle').checked = settings.rule8Enabled;
                     document.getElementById('rule8DropThreshold').value = settings.rule8DropThreshold || 9;
+                    if (settings.screenerEnabled !== undefined) {
+                        document.getElementById('screenerToggle').checked = settings.screenerEnabled;
+                        document.getElementById('screenerMinMarketCap').value = (settings.screenerMinMarketCap || 500000000) / 1e6;
+                        document.getElementById('screenerMinDollarVolume').value = (settings.screenerMinDollarVolume || 3000000) / 1e6;
+                        document.getElementById('screenerMaxPosition').value = settings.screenerMaxPosition || 4000;
+                        document.getElementById('screenerMaxLoss').value = settings.screenerMaxLoss || 300;
+                    }
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -362,7 +411,12 @@
 
             const settings = {
                 rule8Enabled: document.getElementById('rule8Toggle').checked,
-                rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value)
+                rule8DropThreshold: parseFloat(document.getElementById('rule8DropThreshold').value),
+                screenerEnabled: document.getElementById('screenerToggle').checked,
+                screenerMinMarketCap: parseFloat(document.getElementById('screenerMinMarketCap').value) * 1e6,
+                screenerMinDollarVolume: parseFloat(document.getElementById('screenerMinDollarVolume').value) * 1e6,
+                screenerMaxPosition: parseFloat(document.getElementById('screenerMaxPosition').value),
+                screenerMaxLoss: parseFloat(document.getElementById('screenerMaxLoss').value)
             };
 
             btn.disabled = true;

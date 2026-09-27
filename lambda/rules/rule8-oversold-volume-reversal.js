@@ -9,6 +9,51 @@
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
 const { sendSlackAlert } = require('stock-utils/slack-notifier');
 const { STOCKS_TO_MONITOR } = require('stock-utils/stock-list');
+const SCREENER_MAX_STOCKS = 25;
+
+/**
+ * Hand flagged stocks to the Dip Screener via a one-time schedule at 10:05 AM ET
+ * (after the 9:30-10:00 opening range), or 1 minute from now if that has passed.
+ * The schedule carries the list as its input and deletes itself after running.
+ */
+async function scheduleDipScreener(stocks, now) {
+    const { SCREENER_FUNCTION_ARN, SCREENER_SCHEDULER_ROLE_ARN } = process.env;
+    if (!SCREENER_FUNCTION_ARN || !SCREENER_SCHEDULER_ROLE_ARN || !stocks.length) return;
+    // Loaded here so a missing SDK client can never break the gap-down alert itself.
+    const { SchedulerClient, CreateScheduleCommand } = require('@aws-sdk/client-scheduler');
+
+    const etParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).formatToParts(now).map(p => [p.type, p.value]));
+    const date = `${etParts.year}-${etParts.month}-${etParts.day}`;
+    const minuteOfDay = Number(etParts.hour) * 60 + Number(etParts.minute);
+
+    let at = `${date}T10:05:00`;
+    if (minuteOfDay >= 604) {
+        const later = new Date(now.getTime() + 60 * 1000);
+        const l = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).formatToParts(later).map(p => [p.type, p.value]));
+        at = `${date}T${l.hour}:${l.minute}:00`;
+    }
+
+    const payload = {
+        source: 'rule8',
+        date,
+        stocks: stocks.slice(0, SCREENER_MAX_STOCKS).map(s => ({ symbol: s.symbol, drop: +s.gapDown.toFixed(2) })),
+        flaggedTotal: stocks.length
+    };
+    await new SchedulerClient({}).send(new CreateScheduleCommand({
+        Name: `dip-screener-${date}-${etParts.hour}${etParts.minute}${etParts.second}`,
+        ScheduleExpression: `at(${at})`,
+        ScheduleExpressionTimezone: 'America/New_York',
+        FlexibleTimeWindow: { Mode: 'OFF' },
+        ActionAfterCompletion: 'DELETE',
+        Target: { Arn: SCREENER_FUNCTION_ARN, RoleArn: SCREENER_SCHEDULER_ROLE_ARN, Input: JSON.stringify(payload) }
+    }));
+    console.log(`Dip Screener scheduled at ${at} ET for ${payload.stocks.length} stock(s)`);
+}
 
 exports.handler = async (event) => {
     console.log('Rule 8: Gap Down Alert triggered');
@@ -79,6 +124,12 @@ exports.handler = async (event) => {
 
         console.log(`Rule 8: Found ${matchingStocks.length} matching stocks`);
 
+        try {
+            await scheduleDipScreener(matchingStocks, now);
+        } catch (error) {
+            console.error('Failed to schedule Dip Screener:', error);
+        }
+
         if (matchingStocks.length > 0 && slackWebhookUrl) {
             const stockLines = matchingStocks.map(s =>
                 `• *<https://finance.yahoo.com/quote/${s.symbol}|${s.symbol}>* (${s.name}): $${s.price.toFixed(2)} | Drop: *${s.gapDown.toFixed(2)}%*`
@@ -135,3 +186,5 @@ exports.handler = async (event) => {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
 };
+
+exports.scheduleDipScreener = scheduleDipScreener; // exported for testing
