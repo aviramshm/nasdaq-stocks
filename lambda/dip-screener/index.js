@@ -173,7 +173,7 @@ async function analyze(entry, ctx) {
             : `NOT YET (VWAP ${intraday.vwap.toFixed(2)}, 30-min high ${intraday.orHigh?.toFixed(2) ?? 'n/a'})`;
     }
     const plan = (verdict === 'WATCH' || verdict === 'MAYBE')
-        ? scoring.tradePlan({ price, prevClose, dayLow, maxLoss: cfg.maxLoss, maxPosition: cfg.maxPosition })
+        ? scoring.tradePlan({ price, prevClose, dayLow, maxLoss: cfg.maxLoss, maxPosition: cfg.maxPosition, dailyVol: stats.dailyVol })
         : null;
 
     return {
@@ -212,7 +212,8 @@ function stockBlock(r) {
         lines.push(`*Buy signal:* ${r.trigger}`);
         if (r.plan) {
             const p = r.plan;
-            lines.push(`*Plan:* ${p.shares} sh (${money(p.positionUsd)}, limited by ${p.limitedBy}) | stop ${p.stop} (−${money(p.lossIfStoppedUsd)}) | T1 ${p.target1} | T2 ${p.target2} | sell after 10 days`);
+            lines.push(`*Plan:* buy ${p.shares} sh (${money(p.positionUsd)}, limited by ${p.limitedBy}) | T1 ${p.target1} (sell half) | T2 ${p.target2} (sell rest) | sell after 10 days`);
+            lines.push(`*Stop:* ${p.stop} = today's low ${p.dayLow} − ${p.bufferPct}% (half its normal ${p.dailyMovePct}% daily move, min 1%) → −${money(p.lossIfStoppedUsd)} if hit`);
         }
         lines.push(`_${r.notes.join(' · ')}_`);
     } else {

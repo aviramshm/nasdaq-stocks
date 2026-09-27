@@ -31,7 +31,7 @@ test('intradayStats: VWAP, 9:30-10:00 range, day low', () => {
 });
 
 test('tradePlan: full $4,000 when stop is close', () => {
-    const p = s.tradePlan({ price: 50, prevClose: 56, dayLow: 48.4848, maxLoss: 300, maxPosition: 4000 });
+    const p = s.tradePlan({ price: 50, prevClose: 56, dayLow: 48.4848, maxLoss: 300, maxPosition: 4000, dailyVol: 1.5 });
     assert.strictEqual(p.shares, 80);             // 4000 / 50
     assert.strictEqual(p.limitedBy, 'max position');
     assert.ok(p.lossIfStoppedUsd <= 300);
@@ -40,7 +40,7 @@ test('tradePlan: full $4,000 when stop is close', () => {
 });
 
 test('tradePlan: shrinks position when stop is far', () => {
-    const p = s.tradePlan({ price: 50, prevClose: 60, dayLow: 40.404, maxLoss: 300, maxPosition: 4000 });
+    const p = s.tradePlan({ price: 50, prevClose: 60, dayLow: 40.404, maxLoss: 300, maxPosition: 4000, dailyVol: 2 });
     assert.strictEqual(p.stop, 40);
     assert.strictEqual(p.shares, 30);             // 300 / 10
     assert.strictEqual(p.limitedBy, 'max loss');
@@ -83,4 +83,14 @@ test('parseResult takes the final JSON object', () => {
     const text = 'Searched news. The drop follows {weak} data.\n{"cause": "ANALYST_ACTION", "reason": "Downgraded by MS", "warning": ""}';
     assert.deepStrictEqual(parseResult(text), { cause: 'ANALYST_ACTION', reason: 'Downgraded by MS', warning: '' });
     assert.strictEqual(parseResult('{"cause": "MADE_UP"}'), null);
+});
+
+test('stop buffer scales with volatility, minimum 1%', () => {
+    const calm = s.tradePlan({ price: 93, prevClose: 100, dayLow: 88, maxLoss: 300, maxPosition: 4000, dailyVol: 1.5 });
+    const avg = s.tradePlan({ price: 93, prevClose: 100, dayLow: 88, maxLoss: 300, maxPosition: 4000, dailyVol: 3 });
+    const wild = s.tradePlan({ price: 93, prevClose: 100, dayLow: 88, maxLoss: 300, maxPosition: 4000, dailyVol: 6 });
+    assert.deepStrictEqual([calm.stop, avg.stop, wild.stop], [87.12, 86.68, 85.36]);
+    assert.strictEqual(calm.shares, 43);          // capped by $4,000
+    assert.strictEqual(wild.shares, 39);          // 300 / (93 - 85.36)
+    assert.ok(wild.lossIfStoppedUsd <= 300);
 });

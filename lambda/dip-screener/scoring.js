@@ -129,12 +129,16 @@ function verdictFor(cause, score) {
     return 'PASS';
 }
 
+/** Stop buffer below today's low: half the stock's normal daily move, at least 1%. */
+const stopBufferPct = (dailyVol) => Math.max(1, (dailyVol || 0) / 2);
+
 /**
- * Trade plan. Stop = today's low so far minus buffer; size = the smaller of
- * max-loss sizing and max-position sizing.
+ * Trade plan. Stop = today's low so far minus a volatility-scaled buffer; size = the
+ * smaller of max-loss sizing and max-position sizing.
  */
-function tradePlan({ price, prevClose, dayLow, maxLoss, maxPosition, stopBufferPct = 1 }) {
-    const stop = +(dayLow * (1 - stopBufferPct / 100)).toFixed(2);
+function tradePlan({ price, prevClose, dayLow, maxLoss, maxPosition, dailyVol }) {
+    const bufferPct = stopBufferPct(dailyVol);
+    const stop = +(dayLow * (1 - bufferPct / 100)).toFixed(2);
     const riskPerShare = price - stop;
     if (riskPerShare <= 0) return null;
     const byLoss = Math.floor(maxLoss / riskPerShare);
@@ -143,6 +147,9 @@ function tradePlan({ price, prevClose, dayLow, maxLoss, maxPosition, stopBufferP
     return {
         entry: +price.toFixed(2),
         stop,
+        dayLow: +dayLow.toFixed(2),
+        bufferPct: +bufferPct.toFixed(1),
+        dailyMovePct: +(dailyVol || 0).toFixed(1),
         target1: +(price + (prevClose - price) * 0.5).toFixed(2),
         target2: +prevClose.toFixed(2),
         shares,
