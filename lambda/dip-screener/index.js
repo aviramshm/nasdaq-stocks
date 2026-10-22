@@ -413,7 +413,8 @@ exports.handler = async (event = {}, context = {}) => {
 
     return {
         statusCode: 200,
-        body: JSON.stringify({ scored: results.length, results: results.map(r => ({ symbol: r.symbol, verdict: r.verdict, score: r.score, cause: r.cause })) }),
+        // returnFull: used by the Slack bot's score_stock tool
+        body: JSON.stringify({ scored: results.length, results: event.returnFull ? results : results.map(r => ({ symbol: r.symbol, verdict: r.verdict, score: r.score, cause: r.cause })) }),
     };
 };
 
