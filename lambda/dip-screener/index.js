@@ -158,7 +158,7 @@ async function analyze(entry, ctx) {
         reason = `${reason} (but ${sectorEtf || 'sector'} explains only ${(share * 100).toFixed(0)}% of the drop)`;
     } else if (cause === 'UNKNOWN' && sectorExplainsHalf) {
         cause = 'MACRO_OR_SECTOR';
-        reason = `${sectorEtf} is down ${sectorMove.toFixed(1)}%, explaining ${(share * 100).toFixed(0)}% of the drop`;
+        reason = `${sectorEtf} is down ${sectorMove.toFixed(1)}%, explaining ${share >= 1 ? 'all' : `${(share * 100).toFixed(0)}%`} of the drop`;
     }
     score += scoring.CAUSE_POINTS[cause] || 0;
 
