@@ -5,7 +5,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { CAUSE_POINTS } = require('./scoring');
 
-const MODEL = 'claude-opus-5';
+const MODEL = 'claude-sonnet-5'; // ~60% cheaper than Opus 5; classifying a drop's cause doesn't need Opus
 const CAUSES = Object.keys(CAUSE_POINTS);
 
 const SYSTEM = `You classify why a US-listed stock dropped sharply today, for a short-term dip-buying screener.
@@ -58,11 +58,9 @@ async function classifyWithClaude(s) {
         let response;
         // Server-side web search can pause long turns; resume up to twice.
         for (let turn = 0; turn < 3; turn++) {
-            response = await client.beta.messages.create({
+            response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 16000,
-                betas: ['server-side-fallback-2026-07-01'],
-                fallbacks: 'default',
                 output_config: { effort: 'medium' },
                 system: SYSTEM,
                 tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
