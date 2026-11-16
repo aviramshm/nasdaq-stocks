@@ -389,8 +389,16 @@ exports.handler = async (event = {}, context = {}) => {
         { type: 'context', elements: [{ type: 'mrkdwn', text:
             `${counts.map(([v, n]) => `${EMOJI[v]} ${n} ${v}`).join('  ')} | S&P ${spyMove != null ? fmtPct(spyMove) : 'n/a'} | max position ${money(cfg.maxPosition)}, max loss ${money(cfg.maxLoss)}` }] },
         { type: 'divider' },
-        ...results.map(stockBlock),
     ];
+    // Never let a Claude outage (e.g. no API credit) pass silently: keyword causes are unverified
+    const scored = results.filter(r => r.score != null);
+    const unverified = scored.filter(r => r.classifiedBy === 'keywords');
+    if (unverified.length) {
+        blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+            `⚠️ *Claude was unavailable for ${unverified.length} of ${scored.length} stocks* — their causes come from headline keywords only and are *not verified*. `
+            + 'Treat those verdicts with caution. If this repeats, check the Anthropic credit: <https://platform.claude.com/settings/billing|Plans & Billing>' } });
+    }
+    blocks.push(...results.map(stockBlock));
     if (flaggedTotal > toScore.length) {
         blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `+${flaggedTotal - toScore.length} more flagged stocks not scored (limit ${MAX_STOCKS})` }] });
     }
