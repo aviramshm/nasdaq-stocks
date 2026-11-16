@@ -7,8 +7,24 @@
  * is likely an overreaction worth buying into before recovery.
  */
 const { fetchBatchStockData } = require('stock-utils/data-fetcher');
-const { sendSlackAlert } = require('stock-utils/slack-notifier');
+const { sendSlackAlert: sendViaWebhook } = require('stock-utils/slack-notifier');
 const { STOCKS_TO_MONITOR } = require('stock-utils/stock-list');
+/**
+ * Post to Slack: via the Stock Claude bot (chat.postMessage) when SLACK_BOT_TOKEN is set,
+ * otherwise via the legacy incoming webhook.
+ */
+async function sendSlackAlert(target, blocks) {
+    if (target !== 'bot') return sendViaWebhook(target, blocks);
+    const text = blocks.map(b => b.text?.text || b.elements?.[0]?.text).find(Boolean) || 'Stock alert';
+    const res = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8', Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}` },
+        body: JSON.stringify({ channel: process.env.SLACK_CHANNEL_ID, text, blocks, unfurl_links: false }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(`Slack chat.postMessage failed: ${json.error}`);
+}
+
 const SCREENER_MAX_STOCKS = 25;
 
 /**
@@ -95,7 +111,7 @@ exports.handler = async (event) => {
 
     const enabled = process.env.RULE8_ENABLED === 'true';
     const dropThreshold = parseFloat(process.env.RULE8_DROP_THRESHOLD || '9');
-    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const slackWebhookUrl = process.env.SLACK_BOT_TOKEN ? 'bot' : process.env.SLACK_WEBHOOK_URL;
 
     console.log(`Enabled: ${enabled} | Drop threshold: ${dropThreshold}%`);
 

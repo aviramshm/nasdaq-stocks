@@ -32,12 +32,24 @@ function settings() {
         maxPosition: num('SCREENER_MAX_POSITION', '4000'),
         maxLoss: num('SCREENER_MAX_LOSS', '300'),
         minPrice: 5,
-        slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+        // 'bot' = post through the Stock Claude bot; otherwise the legacy incoming webhook
+        slackWebhookUrl: process.env.SLACK_BOT_TOKEN ? 'bot' : process.env.SLACK_WEBHOOK_URL,
     };
 }
 
 async function postSlack(url, blocks, text = 'Dip Screener') {
     if (!url) return;
+    if (url === 'bot') {
+        const res = await fetch('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8', Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}` },
+            body: JSON.stringify({ channel: process.env.SLACK_CHANNEL_ID, text, blocks, unfurl_links: false }),
+            signal: AbortSignal.timeout(15000),
+        });
+        const json = await res.json();
+        if (!json.ok) console.error('Slack chat.postMessage failed:', json.error);
+        return;
+    }
     const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

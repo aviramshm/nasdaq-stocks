@@ -158,9 +158,20 @@ function buildBlocks(replayed) {
         .map(([c, s]) => line(c.replace(/_/g, ' ').toLowerCase(), s));
     blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*By cause*\n${byCause.join('\n')}`.slice(0, 2900) } });
 
-    const recent = closed.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15)
+    // Every WATCH trade, finished or open: these are the ones the system says to act on
+    const watch = replayed.filter(t => t.verdict === 'WATCH').sort((a, b) => b.date.localeCompare(a.date) || a.symbol.localeCompare(b.symbol));
+    if (watch.length) {
+        const lines = watch.map(t => `${t.date} *${t.symbol}*: ${t.outcome} → *${pct(t.returnPct)}*`);
+        // A Slack section holds ~3,000 characters; split long lists across sections
+        for (let i = 0; i < lines.length; i += 40) {
+            const head = i === 0 ? `*🟢 All WATCH trades* (${watch.length})\n` : '';
+            blocks.push({ type: 'section', text: { type: 'mrkdwn', text: (head + lines.slice(i, i + 40).join('\n')).slice(0, 2900) } });
+        }
+    }
+
+    const recent = closed.filter(t => t.verdict !== 'WATCH').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15)
         .map(t => `${EMOJI[t.verdict] || ''} ${t.date} *${t.symbol}* ${t.verdict}: ${t.outcome} → *${pct(t.returnPct)}*`);
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Latest finished trades*\n${recent.join('\n')}`.slice(0, 2900) } });
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Latest other finished trades*\n${recent.join('\n')}`.slice(0, 2900) } });
 
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text:
         `${open.length} trade(s) still open. Every scored stock is replayed the same way — bought at the 10:05 price, stop / T1 (half) / T2 / day-${HOLD_DAYS} exit — ` +
